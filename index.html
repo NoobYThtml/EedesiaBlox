@@ -5,161 +5,115 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EedesiaBlox</title>
 <style>
-body {
-  margin:0; font-family: 'Verdana', sans-serif;
-  background: linear-gradient(45deg, red, yellow, orange, green);
-  overflow:hidden;
-  color:white;
-}
-button {padding:5px 10px;margin:2px;font-weight:bold;cursor:pointer;}
-#uiToggle {position:fixed;top:10px;right:10px;z-index:1000;}
-#ui {position:absolute;top:50px;left:10px;}
-#chat {position:fixed;top:50px;right:10px;width:200px;height:300px;background:rgba(0,0,0,0.5);overflow:auto;display:none;}
-#chatInput {width:100%;box-sizing:border-box;}
-#obby {position:absolute;bottom:0;width:100%;height:400px;background:#222;}
-.player {position:absolute;width:30px;height:30px;background:blue;}
-.obstacle {position:absolute;width:50px;height:50px;background:red;}
-#tycoon {position:absolute;top:10px;left:200px;width:300px;height:200px;background:#333;padding:5px;overflow:auto;}
-#mobileControls {position:fixed;bottom:10px;left:50%;transform:translateX(-50%);display:none;}
-#mobileControls button {width:50px;height:50px;margin:2px;}
+body{margin:0;font-family:Verdana, sans-serif;background:linear-gradient(45deg, red, yellow, orange, green);overflow:hidden;}
+#menu,#obby,#tycoon,#chat{position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.7);color:white;padding:10px;border-radius:8px;}
+button{margin:5px;padding:5px;border:none;border-radius:5px;background:white;color:black;cursor:pointer;}
+#chat{width:200px;height:300px;overflow:auto;transition:all 0.5s;}
+#chat input{width:100%;padding:5px;margin-top:5px;border-radius:5px;border:none;}
+.mobile-controls{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:10px;}
+.mobile-controls button{padding:20px;background:white;border-radius:50%;}
 </style>
 </head>
 <body>
 
-<button id="uiToggle">Toggle UI</button>
-<div id="ui">
-  <button id="loginBtn">Login</button>
-  <button id="signupBtn">Sign Up</button>
-  <button id="obbyBtn">Obby</button>
-  <button id="tycoonBtn">Tycoon</button>
-  <button id="musicBtn">Music On</button>
-  <button id="chatBtn">Chat</button>
+<div id="menu">
+<h2>EedesiaBlox</h2>
+<button onclick="showGame('obby')">Obby</button>
+<button onclick="showGame('tycoon')">Tycoon</button>
+<button onclick="toggleChat()">Chat</button>
+<button onclick="toggleMusic()">Music</button>
 </div>
 
-<div id="chat">
-  <div id="messages"></div>
-  <input id="chatInput" placeholder="Type message">
+<div id="obby" style="display:none;">
+<canvas id="obbyCanvas" width="600" height="400" style="background:#87ceeb;"></canvas>
+<div class="mobile-controls">
+<button onclick="moveLeft()">◀</button>
+<button onclick="jump()">▲</button>
+<button onclick="moveRight()">▶</button>
+</div>
 </div>
 
-<div id="obby"></div>
-<div class="player" id="player"></div>
-<div id="tycoon"></div>
+<div id="tycoon" style="display:none;">
+<h3>Tycoon</h3>
+<p>Money: <span id="money">0</span></p>
+<button onclick="collectMoney()">Collect</button>
+<div id="decor">🏭🎈🕹️</div>
+</div>
 
-<div id="mobileControls">
-  <button id="leftBtn">←</button>
-  <button id="jumpBtn">↑</button>
-  <button id="rightBtn">→</button>
+<div id="chat" style="display:none;">
+<div id="chatMessages"></div>
+<input type="text" id="chatInput" placeholder="Type message..." onkeydown="if(event.key==='Enter'){sendMessage();}">
 </div>
 
 <audio id="music" loop>
-  <source src="https://www.roblox.com/asset/?id=1841281032" type="audio/mpeg">
+<source src="https://www.roblox.com/library/1832744586/Winds-of-Fjords" type="audio/mpeg">
 </audio>
 
 <script>
-// UI Toggle
-const ui = document.getElementById('ui');
-document.getElementById('uiToggle').onclick = () => ui.style.display = (ui.style.display=='none')?'block':'none';
+// Game menu logic
+function showGame(game){
+  document.getElementById('obby').style.display='none';
+  document.getElementById('tycoon').style.display='none';
+  document.getElementById(game).style.display='block';
+}
 
-// Music Toggle
-const music = document.getElementById('music');
-let musicOn = true;
-document.getElementById('musicBtn').onclick = ()=>{
-  musicOn = !musicOn;
-  if(musicOn) music.play(); else music.pause();
-  document.getElementById('musicBtn').innerText = musicOn?'Music On':'Music Off';
-};
-music.play();
-
-// Chat Toggle
-const chat = document.getElementById('chat');
-document.getElementById('chatBtn').onclick = () => {
-  chat.style.display = (chat.style.display=='none')?'block':'none';
-};
-
-// Chat System
-const messages = document.getElementById('messages');
-const chatInput = document.getElementById('chatInput');
-const toxicWords = ['badword','sex','toxic'];
-chatInput.addEventListener('keydown', e=>{
-  if(e.key=='Enter'){
-    let msg = chatInput.value;
-    chatInput.value='';
-    let lower = msg.toLowerCase();
-    let blocked = toxicWords.some(w=>lower.includes(w));
-    if(blocked){alert('Message blocked due to toxic content'); return;}
-    let div = document.createElement('div'); div.innerText = msg; messages.appendChild(div);
-    setTimeout(()=>div.remove(),30000);
-  }
-});
-
-// Obby logic
-const player = document.getElementById('player');
-let px=100,py=350,vy=0,jumping=false,gravity=0.5;
-const obstacles = [];
-const obby = document.getElementById('obby');
-function createObstacles(){
-  for(let i=0;i<5;i++){
-    let obs = document.createElement('div');
-    obs.className='obstacle';
-    obs.style.left=(i*100+50)+'px';
-    obs.style.bottom='50px';
-    obby.appendChild(obs);
-    obstacles.push(obs);
+// Chat logic
+let chatVisible=false;
+function toggleChat(){
+  chatVisible=!chatVisible;
+  document.getElementById('chat').style.display=chatVisible?'block':'none';
+  if(chatVisible)setTimeout(()=>{document.getElementById('chat').style.display='none';chatVisible=false;},30000);
+}
+let messages=[];
+function sendMessage(){
+  let input=document.getElementById('chatInput');
+  let msg=input.value.trim();input.value='';
+  if(msg.length>0){
+    if(/sex|swear/i.test(msg))return alert('Account terminated or banned for 1h!');
+    if(/toxic/i.test(msg))return alert('Warning: Toxic behavior!');
+    messages.push(msg);
+    document.getElementById('chatMessages').innerHTML=messages.join('<br>');
   }
 }
-createObstacles();
 
-function updateObby(){
-  vy+=gravity;
-  py+=vy;
-  if(py>350){py=350;vy=0;jumping=false;}
-  obstacles.forEach(o=>{
-    let ox = parseInt(o.style.left);
-    let oy = parseInt(o.style.bottom);
-    if(px+30>ox && px<ox+50 && py<oy+50 && py+30>oy){py=oy+50;vy=0;jumping=false;}
+// Music toggle
+let musicPlaying=false;
+function toggleMusic(){
+  let music=document.getElementById('music');
+  if(musicPlaying){music.pause();musicPlaying=false;}else{music.play();musicPlaying=true;}
+}
+
+// Tycoon logic
+let money=0;
+function collectMoney(){money+=1;document.getElementById('money').textContent=money;localStorage.setItem('money',money);}
+window.onload=()=>{if(localStorage.getItem('money'))money=+localStorage.getItem('money');document.getElementById('money').textContent=money;};
+
+// Obby logic (basic platformer)
+let canvas=document.getElementById('obbyCanvas'),ctx=canvas.getContext('2d');
+let player={x:50,y:350,w:30,h:30,vy:0,jumping:false};
+let keys={left:false,right:false};
+document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')keys.left=true;if(e.key==='ArrowRight')keys.right=true;if(e.key==='ArrowUp')jump();});
+document.addEventListener('keyup',e=>{if(e.key==='ArrowLeft')keys.left=false;if(e.key==='ArrowRight')keys.right=false;});
+function moveLeft(){keys.left=true;setTimeout(()=>keys.left=false,200);}
+function moveRight(){keys.right=true;setTimeout(()=>keys.right=false,200);}
+function jump(){if(!player.jumping){player.vy=-10;player.jumping=true;}}
+let platforms=[{x:0,y:380,w:600,h:20},{x:100,y:300,w:100,h:10},{x:250,y:250,w:100,h:10}];
+function gameLoop(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  player.vy+=0.5;player.y+=player.vy;
+  if(keys.left)player.x-=3;if(keys.right)player.x+=3;
+  // collision
+  player.jumping=true;
+  platforms.forEach(p=>{
+    ctx.fillStyle='brown';ctx.fillRect(p.x,p.y,p.w,p.h);
+    if(player.x+player.w>p.x && player.x< p.x+p.w && player.y+player.h>p.y && player.y<p.y+p.h){
+      player.y=p.y-player.h;player.vy=0;player.jumping=false;
+    }
   });
-  player.style.left=px+'px';
-  player.style.bottom=py+'px';
-  requestAnimationFrame(updateObby);
+  ctx.fillStyle='red';ctx.fillRect(player.x,player.y,player.w,player.h);
+  requestAnimationFrame(gameLoop);
 }
-updateObby();
-
-// Player controls
-let left=false,right=false;
-document.addEventListener('keydown',e=>{
-  if(e.key=='ArrowLeft') left=true;
-  if(e.key=='ArrowRight') right=true;
-  if(e.key=='ArrowUp' && !jumping){vy=-10;jumping=true;}
-});
-document.addEventListener('keyup',e=>{
-  if(e.key=='ArrowLeft') left=false;
-  if(e.key=='ArrowRight') right=false;
-});
-function movePlayer(){
-  if(left) px-=5;
-  if(right) px+=5;
-  requestAnimationFrame(movePlayer);
-}
-movePlayer();
-
-// Mobile controls
-const mobile = document.getElementById('mobileControls');
-if(/Mobi|Android/i.test(navigator.userAgent)) mobile.style.display='block';
-document.getElementById('leftBtn').onmousedown=()=>left=true; document.getElementById('leftBtn').onmouseup=()=>left=false;
-document.getElementById('rightBtn').onmousedown=()=>right=true; document.getElementById('rightBtn').onmouseup=()=>right=false;
-document.getElementById('jumpBtn').onclick=()=>{if(!jumping){vy=-10;jumping=true;}};
-
-// Tycoon Clicker
-const tycoon = document.getElementById('tycoon');
-let money = 0;
-function createTycoon(){
-  tycoon.innerHTML='<h3>Retro Tycoon</h3><div>Money: <span id="money">0</span></div><button id="clicker">Click</button>';
-  document.getElementById('clicker').onclick=()=>{
-    money+=1;
-    document.getElementById('money').innerText=money;
-  };
-}
-createTycoon();
+gameLoop();
 </script>
 
 </body>
