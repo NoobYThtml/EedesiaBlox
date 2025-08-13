@@ -45,7 +45,7 @@ let music=new Audio('winds_of_fjords.mp3'); music.loop=true; music.play();
 let musicPlaying=true;
 document.getElementById('musicToggle').onclick=()=>{musicPlaying=!musicPlaying;musicPlaying?music.play():music.pause();};
 
-// Mobile & keyboard controls
+// Controls
 let keys={};
 document.getElementById('jumpBtn').onclick=()=>{if(player.onGround)player.vy=jumpPower;}
 document.getElementById('leftBtn').onclick=()=>{player.vx=-5;}
@@ -53,7 +53,7 @@ document.getElementById('rightBtn').onclick=()=>{player.vx=5;}
 window.addEventListener('keydown',e=>keys[e.key]=true);
 window.addEventListener('keyup',e=>keys[e.key]=false);
 
-// Game selection
+// Mode
 let mode='hub';
 document.getElementById('hubBtn').onclick=()=>{mode='hub';};
 document.getElementById('obbyBtn').onclick=()=>{mode='obby';};
@@ -64,9 +64,9 @@ let gravity=0.7, jumpPower=-12;
 let player={x:50,y:200,vx:0,vy:0,w:30,h:50,onGround:false};
 let obstacles=[{x:200,y:400,w:100,h:20},{x:400,y:300,w:100,h:20}];
 
-// Tycoon example
+// Tycoon system
 let money=0;
-let tycoonBoxes=[{x:300,y:300,w:50,h:50,owned:false}];
+let tycoonBoxes=[{x:300,y:300,w:50,h:50,owned:false,level:0}];
 
 // Chat
 const chatBox=document.getElementById('chatBox');
@@ -86,10 +86,12 @@ ws.onmessage=(msg)=>{
   if(data.type==='init'){playerId=data.id;players=data.players;}
   if(data.type==='players'){players=data.players;}
   if(data.type==='chat'){chatBox.innerHTML+='<div>'+data.player+': '+data.msg+'</div>'; chatBox.scrollTop=chatBox.scrollHeight;}
+  if(data.type==='tycoon'){tycoonBoxes=data.tycoonBoxes;}
 };
 
 // Update function
 function update(){
+  // Hub does nothing special
   if(mode==='obby'){
     if(keys['ArrowLeft']) player.vx=-5; else if(keys['ArrowRight']) player.vx=5; else player.vx=0;
     if(keys['ArrowUp'] && player.onGround) player.vy=jumpPower;
@@ -106,6 +108,19 @@ function update(){
     ws.send(JSON.stringify({type:'update',player:{x:player.x,y:player.y,w:player.w,h:player.h}}));
   } else if(mode==='tycoon'){
     money+=0.1;
+    // Check for clicks to buy or upgrade
+    canvas.onclick=e=>{
+      const rect=canvas.getBoundingClientRect();
+      const mx=e.clientX-rect.left;
+      const my=e.clientY-rect.top;
+      tycoonBoxes.forEach(b=>{
+        if(mx>b.x && mx<b.x+b.w && my>b.y && my<b.y+b.h){
+          if(!b.owned && money>=50){b.owned=true;b.level=1;money-=50;}
+          else if(b.owned && money>=100){b.level++;money-=100;}
+          ws.send(JSON.stringify({type:'tycoon',tycoonBoxes}));
+        }
+      });
+    };
   }
 }
 
@@ -123,8 +138,14 @@ function draw(){
     ctx.fillStyle='green';
     ctx.font='40px Arial';
     ctx.fillText('Money: '+Math.floor(money),50,100);
-    ctx.fillStyle='orange';
-    tycoonBoxes.forEach(b=>ctx.fillRect(b.x,b.y,b.w,b.h));
+    tycoonBoxes.forEach(b=>{
+      ctx.fillStyle=b.owned?'orange':'gray';
+      ctx.fillRect(b.x,b.y,b.w,b.h);
+      if(b.owned){
+        ctx.fillStyle='white';
+        ctx.fillText('Lvl '+b.level,b.x,b.y-5);
+      }
+    });
   }
 }
 
