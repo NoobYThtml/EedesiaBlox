@@ -2,155 +2,125 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EedesiaBlox</title>
 <style>
-body{margin:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,#ff0000,#ffa500,#ffff00,#00ff00);color:#fff;overflow:hidden}
-#header{text-align:center;font-size:2em;padding:10px;background:#222}
-.button{padding:10px;margin:5px;border:none;border-radius:5px;cursor:pointer;background:#444;color:#fff}
-#games,#chat,#login{position:absolute;top:60px;left:10px;}
-#chat{right:10px;left:auto;width:200px;height:300px;background:#333;overflow:auto;font-size:0.9em;padding:5px;border-radius:5px;display:none;}
-#chat input{width:100%;box-sizing:border-box;margin-top:5px}
-.mobileControls{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:5px;}
-.mobileControls button{padding:15px;background:#555;border:none;border-radius:5px;color:#fff;}
-.hidden{display:none}
-#gameCanvas{border:2px solid #fff;background:#111;display:block;margin:20px auto;}
+body,html{margin:0;padding:0;height:100%;overflow:hidden;font-family:Arial, sans-serif;}
+body{background:linear-gradient(135deg,red,yellow,orange,green);color:white;}
+#mainMenu,#obby,#tycoon,#chatBox,#loginBox,#signupBox,#musicBtn,#uiToggle{position:absolute;}
+#mainMenu,#obby,#tycoon,#loginBox,#signupBox{top:50%;left:50%;transform:translate(-50%,-50%);}
+button{padding:10px;margin:5px;border:none;border-radius:5px;cursor:pointer;}
+#chatBox{right:10px;top:50%;transform:translateY(-50%);width:200px;height:300px;overflow-y:auto;background:rgba(0,0,0,0.5);padding:5px;display:none;}
+#chatInput{width:calc(100% - 10px);}
+#musicBtn,#uiToggle{top:10px;}
+#musicBtn{left:10px;}#uiToggle{right:10px;}
+#obbyCanvas{background:#222;width:400px;height:300px;display:block;margin:auto;border:3px solid #fff;}
 </style>
 </head>
 <body>
-<div id="header">Welcome to EedesiaBlox</div>
 
-<div id="login">
-<button class="button" onclick="showLogin()">Login</button>
-<button class="button" onclick="showSignup()">Sign Up</button>
-<div id="loginForm" class="hidden">
-<input id="user" placeholder="Username"><br>
-<input id="pass" type="password" placeholder="Password"><br>
+<!-- Main Menu -->
+<div id="mainMenu">
+<h1>EedesiaBlox</h1>
+<button onclick="showLogin()">Login</button>
+<button onclick="showSignup()">Sign Up</button>
+<button onclick="enterObby()">Play Obby</button>
+<button onclick="enterTycoon()">Play Tycoon</button>
+<button onclick="toggleChat()">Chat</button>
+</div>
+
+<!-- Login -->
+<div id="loginBox" style="display:none;">
+<h2>Login</h2>
+<input id="loginUser" placeholder="Username"><br>
+<input id="loginPass" type="password" placeholder="Password"><br>
 <button onclick="login()">Login</button>
+<button onclick="closeLogin()">Back</button>
 </div>
-<div id="signupForm" class="hidden">
-<input id="newUser" placeholder="New Username"><br>
-<input id="newPass" type="password" placeholder="New Password"><br>
+
+<!-- Signup -->
+<div id="signupBox" style="display:none;">
+<h2>Sign Up</h2>
+<input id="signupUser" placeholder="Username"><br>
+<input id="signupPass" type="password" placeholder="Password"><br>
 <button onclick="signup()">Sign Up</button>
-</div>
-</div>
-
-<div id="games">
-<button class="button" onclick="toggleObby()">Obby</button>
-<button class="button" onclick="toggleTycoon()">Tycoon</button>
-<button class="button" onclick="toggleMusic()">Music On/Off</button>
-<button class="button" onclick="toggleChat()">Chat</button>
+<button onclick="closeSignup()">Back</button>
 </div>
 
-<div id="chat">
+<!-- Obby -->
+<div id="obby" style="display:none;">
+<canvas id="obbyCanvas"></canvas><br>
+<button onclick="backToHub()">Back to Hub</button>
+</div>
+
+<!-- Tycoon -->
+<div id="tycoon" style="display:none;">
+<h2>Tycoon</h2>
+<button onclick="earnCoin()">Collect Coin</button><br>
+Coins: <span id="coins">0</span><br>
+<button onclick="backToHub()">Back to Hub</button>
+</div>
+
+<!-- Chat -->
+<div id="chatBox">
 <div id="chatMessages"></div>
-<input id="chatInput" placeholder="Type..." onkeydown="if(event.key==='Enter')sendChat()">
+<input id="chatInput" placeholder="Type..." onkeydown="if(event.key==='Enter'){sendChat();}">
 </div>
 
-<div class="mobileControls hidden" id="mobileControls">
-<button onclick="movePlayer(-1)">◀</button>
-<button onclick="movePlayer(1)">▶</button>
-<button onclick="jumpPlayer()">▲</button>
-</div>
+<!-- Music & UI Toggle -->
+<button id="musicBtn" onclick="toggleMusic()">Music: On</button>
+<button id="uiToggle" onclick="toggleUI()">Toggle UI</button>
 
-<canvas id="gameCanvas" width="600" height="300"></canvas>
+<audio id="music" loop src="winds_of_fjords.mp3"></audio>
 
 <script>
-let musicOn=true,chatVisible=false;
-const ws=new WebSocket('wss://example.com'); // Replace with your WebSocket server
-let toxicWords=['swear','toxic','sexial content'];
-let warnCount=0;
-let playerId='p'+Math.floor(Math.random()*10000);
-let players={}; // multiplayer players
-let coins=0,clickRate=1,upgradeCost=10;
+// --- Simple Account System ---
+let accounts=JSON.parse(localStorage.getItem('accounts')||'{}'),currentUser=null;
+function showLogin(){document.getElementById('loginBox').style.display='block';document.getElementById('mainMenu').style.display='none';}
+function closeLogin(){document.getElementById('loginBox').style.display='none';document.getElementById('mainMenu').style.display='block';}
+function showSignup(){document.getElementById('signupBox').style.display='block';document.getElementById('mainMenu').style.display='none';}
+function closeSignup(){document.getElementById('signupBox').style.display='none';document.getElementById('mainMenu').style.display='block';}
+function login(){let u=document.getElementById('loginUser').value,p=document.getElementById('loginPass').value;
+if(accounts[u]&&accounts[u]===p){currentUser=u;alert('Logged in');closeLogin();}else alert('Invalid');}
+function signup(){let u=document.getElementById('signupUser').value,p=document.getElementById('signupPass').value;
+if(accounts[u]){alert('Exists');return;}accounts[u]=p;localStorage.setItem('accounts',JSON.stringify(accounts));currentUser=u;alert('Account created');closeSignup();}
 
-function showLogin(){document.getElementById('loginForm').classList.toggle('hidden');}
-function showSignup(){document.getElementById('signupForm').classList.toggle('hidden');}
-function login(){alert('Logged in as '+document.getElementById('user').value);}
-function signup(){alert('Signed up as '+document.getElementById('newUser').value);}
-function toggleObby(){currentGame='obby';resetObby();}
-function toggleTycoon(){currentGame='tycoon';resetTycoon();}
-function toggleMusic(){musicOn=!musicOn;if(musicOn){audio.play()}else{audio.pause();}}
-function toggleChat(){chatVisible=!chatVisible;document.getElementById('chat').style.display=chatVisible?'block':'none';}
-function sendChat(){
-let msg=document.getElementById('chatInput').value;
-document.getElementById('chatInput').value='';
-if(toxicWords.some(w=>msg.toLowerCase().includes(w))){
-warnCount++;
-if(msg.toLowerCase().includes('sexial content')){alert('Account terminated');}
-else if(warnCount>=2){alert('Banned 1 hour');}
-else{alert('Warning: Toxic message!');}
-return;
-}
-let chat=document.getElementById('chatMessages');
-chat.innerHTML+='<div>'+msg+'</div>';
-setTimeout(()=>{chat.innerHTML=''},30000);
-ws.send(JSON.stringify({type:'chat',player:playerId,message:msg}));
-}
+// --- UI Toggles ---
+function toggleUI(){document.getElementById('mainMenu').style.display=document.getElementById('mainMenu').style.display==='none'?'block':'none';
+document.getElementById('obby').style.display='none';document.getElementById('tycoon').style.display='none';}
 
-const audio=new Audio('https://cdn.pixabay.com/download/audio/2022/03/15/audio_7d0b62e2c1.mp3?filename=winds-of-fjords-8982.mp3');
-audio.loop=true;if(musicOn){audio.play();}
+// --- Music ---
+let musicPlaying=true;function toggleMusic(){let m=document.getElementById('music');musicPlaying=!musicPlaying;musicPlaying?m.play():m.pause();
+document.getElementById('musicBtn').innerText='Music: '+(musicPlaying?'On':'Off');}
 
-if(/Mobi|Android/i.test(navigator.userAgent)){document.getElementById('mobileControls').classList.remove('hidden');}
+// --- Chat ---
+let chatVisible=false;function toggleChat(){chatVisible=!chatVisible;document.getElementById('chatBox').style.display=chatVisible?'block':'none';}
+function sendChat(){let input=document.getElementById('chatInput'),msg=input.value.trim();if(!msg)return;
+// --- Chat Filter ---
+let bannedWords=['swear1','swear2'],warned=false;
+if(msg.toLowerCase().includes('sexual content')){alert('Account terminated');delete accounts[currentUser];localStorage.setItem('accounts',JSON.stringify(accounts));currentUser=null;toggleChat();return;}
+if(bannedWords.some(w=>msg.toLowerCase().includes(w))){alert('Banned 1h');return;}
+if(msg.toLowerCase().includes('toxic')){if(warned){alert('Banned 1h');return;}else{warned=true;alert('Warned for toxicity');}}
+let chat=document.getElementById('chatMessages');chat.innerHTML+='<div>'+currentUser+': '+msg+'</div>';input.value='';chat.scrollTop=chat.scrollHeight;
+setTimeout(()=>{chat.innerHTML='';},30000);}
 
-// --- Obby Game ---
-const canvas=document.getElementById('gameCanvas');
-const ctx=canvas.getContext('2d');
-let currentGame='obby';
-let player={x:50,y:250,w:20,h:20,vy:0,jumping:false};
-let platforms=[{x:0,y:280,w:600,h:20},{x:150,y:220,w:50,h:10},{x:300,y:180,w:50,h:10},{x:450,y:140,w:50,h:10}];
-let gravity=0.5;
-let keys={left:false,right:false,up:false};
-document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')keys.left=true;if(e.key==='ArrowRight')keys.right=true;if(e.key==='ArrowUp')keys.up=true;});
-document.addEventListener('keyup',e=>{if(e.key==='ArrowLeft')keys.left=false;if(e.key==='ArrowRight')keys.right=false;if(e.key==='ArrowUp')keys.up=false;});
-function movePlayer(dir){keys.left=dir<0;keys.right=dir>0;}
-function jumpPlayer(){keys.up=true;}
+// --- Games ---
+let coins=0;
+function enterObby(){document.getElementById('mainMenu').style.display='none';document.getElementById('obby').style.display='block';initObby();}
+function enterTycoon(){document.getElementById('mainMenu').style.display='none';document.getElementById('tycoon').style.display='block';}
+function backToHub(){document.getElementById('obby').style.display='none';document.getElementById('tycoon').style.display='none';document.getElementById('mainMenu').style.display='block';}
+function earnCoin(){coins++;document.getElementById('coins').innerText=coins;}
 
-function resetObby(){player.x=50;player.y=250;player.vy=0;player.jumping=false;}
-function resetTycoon(){coins=0;clickRate=1;upgradeCost=10;}
-
-// --- WebSocket multiplayer ---
-ws.onopen=()=>{ws.send(JSON.stringify({type:'join',player:playerId}))};
-ws.onmessage=msg=>{
-let data=JSON.parse(msg.data);
-if(data.type==='state'){players=data.players;}
-if(data.type==='chat'){let chat=document.getElementById('chatMessages');chat.innerHTML+='<div>'+data.player+': '+data.message+'</div>';setTimeout(()=>{chat.innerHTML=''},30000);}
-if(data.type==='tycoon'){coins=data.coins;}
-};
-
-function sendPlayerState(){ws.send(JSON.stringify({type:'state',player:playerId,x:player.x,y:player.y}))}
-function sendTycoonState(){ws.send(JSON.stringify({type:'tycoon',player:playerId,coins:coins}))}
-
-// --- Tycoon ---
-canvas.addEventListener('click',e=>{
-if(currentGame==='tycoon'){
-let rect=canvas.getBoundingClientRect();
-let mx=e.clientX-rect.left,my=e.clientY-rect.top;
-if(mx>50&&mx<150&&my>100&&my<130){coins+=clickRate;sendTycoonState();}
-}
-});
-
-// --- Game Loop ---
-function gameLoop(){
-ctx.clearRect(0,0,canvas.width,canvas.height);
-if(currentGame==='obby'){
-player.vy+=gravity;
-player.y+=player.vy;
-if(keys.left)player.x-=3;
-if(keys.right)player.x+=3;
-if(keys.up && !player.jumping){player.vy=-10;player.jumping=true;}
-let onGround=false;
-platforms.forEach(p=>{
-if(player.x+player.w>p.x && player.x<p.x+p.w && player.y+player.h>p.y && player.y+player.h<p.y+p.h+player.vy){
-player.y=p.y-player.h;player.vy=0;player.jumping=false;onGround=true;
-}
-ctx.fillStyle='#888';ctx.fillRect(p.x,p.y,p.w,p.h);
-});
-ctx.fillStyle='#0f0';ctx.fillRect(player.x,player.y,player.w,player.h);
-sendPlayerState();
-for(let id in players){
-if(id!==playerId){let pl=players[id];ctx.fillStyle='#f00';ctx.fillRect(pl.x,pl.y,20,20);}
-}
-}else if(currentGame==='tycoon'){
-ctx.fillStyle='#fff';
-ctx.fillText('Coins: '+coins,10,50);
-ctx.fillRect(50,100,100
+// --- Obby Platformer ---
+let obbyCanvas,ctx,player={x:50,y:250,w:20,h:20,vx:0,vy:0,jumping:false},keys={};
+function initObby(){obbyCanvas=document.getElementById('obbyCanvas');ctx=obbyCanvas.getContext('2d');document.addEventListener('keydown',e=>keys[e.key]=true);
+document.addEventListener('keyup',e=>keys[e.key]=false);requestAnimationFrame(obbyLoop);}
+function obbyLoop(){ctx.clearRect(0,0,obbyCanvas.width,obbyCanvas.height);
+// --- Basic platform ---
+ctx.fillStyle='white';ctx.fillRect(0,280,400,20);
+player.vx=0;if(keys['ArrowLeft'])player.vx=-2;if(keys['ArrowRight'])player.vx=2;if(keys['ArrowUp']&&!player.jumping){player.vy=-5;player.jumping=true;}
+player.vy+=0.2;player.x+=player.vx;player.y+=player.vy;if(player.y>260){player.y=260;player.vy=0;player.jumping=false;}
+ctx.fillStyle='red';ctx.fillRect(player.x,player.y,player.w,player.h);requestAnimationFrame(obbyLoop);}
+</script>
+</body>
+</html>
