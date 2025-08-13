@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Eedesia Blox Retro</title>
+<title>Eedesia Blox Retro Platformer</title>
 <style>
 body{margin:0;font-family:monospace;background:#87CEEB;color:black;display:flex;flex-direction:column;align-items:center;}
 h1,h2{margin:5px;}
@@ -28,12 +28,13 @@ h1,h2{margin:5px;}
 </div>
 
 <div id="obby">
-  <h2>Eedesia Obby Retro</h2>
+  <h2>Eedesia Obby Platformer</h2>
   <canvas id="gameCanvas" width="500" height="300"></canvas>
   <div id="message"></div>
   <div class="mobileControls">
+    <button onclick="moveLeft()">Left</button>
     <button onclick="jump()">Jump</button>
-    <button onclick="dodge()">Dodge</button>
+    <button onclick="moveRight()">Right</button>
   </div>
   <div style="margin-top:5px;">
     <button onclick="backToHub()">Back to Hub</button>
@@ -55,7 +56,7 @@ function showObby(){document.getElementById('menu').style.display='none';documen
 function backToHub(){document.getElementById('obby').style.display='none';document.getElementById('menu').style.display='flex';}
 
 // Game setup
-let canvas, ctx, player, gravity=0.6, obstacles=[], finishX=450, level=0, levels, messageTimeout, offsetX=0, checkpoints=[];
+let canvas, ctx, player, gravity=0.6, keys={}, obstacles=[], finishX=450, level=0, levels, messageTimeout, checkpoints=[];
 
 levels=[
   [{x:100,y:250,w:50,h:20},{x:200,y:220,w:60,h:20},{x:300,y:180,w:50,h:20},{x:400,y:240,w:50,h:20}],
@@ -67,49 +68,67 @@ function startGame(){
   canvas=document.getElementById('gameCanvas'); ctx=canvas.getContext('2d');
   player={x:50,y:200,w:20,h:20,vy:0};
   obstacles=JSON.parse(JSON.stringify(levels[level]));
-  offsetX=0;
   checkpoints=[{x:50,y:200}];
   document.getElementById('message').textContent="";
   requestAnimationFrame(updateGame);
 }
 
+// Controls
+document.addEventListener('keydown',e=>{keys[e.key]=true;});
+document.addEventListener('keyup',e=>{keys[e.key]=false;});
+function moveLeft(){ keys['ArrowLeft']=true; setTimeout(()=>{keys['ArrowLeft']=false;},100);}
+function moveRight(){ keys['ArrowRight']=true; setTimeout(()=>{keys['ArrowRight']=false;},100);}
+function jump(){ if(onGround) player.vy=-10; }
+
+let onGround=false;
+
 function updateGame(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  offsetX+=1;
+  // movement
+  if(keys['ArrowLeft']||keys['a']) player.x-=3;
+  if(keys['ArrowRight']||keys['d']) player.x+=3;
+  player.vy+=gravity; player.y+=player.vy;
 
-  // draw obstacles with simple "ray trace" lighting
+  // collisions
+  onGround=false;
+  for(let obs of obstacles){
+    if(player.x+player.w>obs.x && player.x<obs.x+obs.w && player.y+player.h>obs.y && player.y<obs.y+obs.h){
+      // from top
+      if(player.vy>0 && player.y+player.h-obs.y<player.vy+1){player.y=obs.y-player.h;player.vy=0; onGround=true;}
+      // from bottom
+      else if(player.vy<0 && obs.y+obs.h-player.y<player.vy*-1){player.y=obs.y+obs.h;player.vy=0;}
+      // from sides
+      else if(player.x+player.w/2<obs.x+obs.w/2) player.x=obs.x-player.w;
+      else player.x=obs.x+obs.w;
+    }
+  }
+
+  if(player.y+player.h>270){player.y=270-player.h;player.vy=0;onGround=true;}
+
+  // draw obstacles with simple shading
   for(let obs of obstacles){
     let dx=50-obs.x, dy=50-obs.y, shade=Math.max(0,1-Math.sqrt(dx*dx+dy*dy)/300);
     ctx.fillStyle=`rgba(${100+shade*155},${50+shade*100},0,1)`;
-    ctx.fillRect(obs.x-offsetX,obs.y,obs.w,obs.h);
+    ctx.fillRect(obs.x,obs.y,obs.w,obs.h);
   }
 
   // draw finish
-  ctx.fillStyle='gold';
-  ctx.fillRect(finishX-offsetX,250,10,20);
-
-  // physics
-  player.vy+=gravity; player.y+=player.vy;
-
-  let onGround=false;
-  for(let obs of obstacles){
-    if(player.x+player.w>obs.x-offsetX && player.x<obs.x-offsetX+obs.w && player.y+player.h>obs.y && player.y+player.h<player.vy+obs.y+obs.h){
-      player.y=obs.y-player.h; player.vy=0; onGround=true;
-      // checkpoint
-      if(!checkpoints.find(c=>c.x===obs.x)){checkpoints.push({x:player.x,y:player.y});}
-    }
-  }
-  if(player.y+player.h>270){player.y=270-player.h;player.vy=0;onGround=true;}
+  ctx.fillStyle='gold'; ctx.fillRect(finishX,250,10,20);
 
   // draw player with shadow
   ctx.fillStyle='red'; ctx.fillRect(player.x,player.y,player.w,player.h);
   ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.fillRect(player.x+5,player.y+5,player.w,player.h);
 
-  // finish check
+  // checkpoint
+  for(let obs of obstacles){
+    if(player.y+player.h===obs.y && !checkpoints.find(c=>c.x===obs.x)){checkpoints.push({x:player.x,y:player.y});}
+  }
+
+  // finish
   if(player.x+player.w>=finishX){ level++; if(level>=levels.length){showMessage('You completed all levels!'); setTimeout(backToHub,1500); return;} showMessage('Level complete!'); setTimeout(startGame,1000); return;}
 
-  // fall respawn at last checkpoint
+  // fall respawn
   if(player.y>300){ let cp=checkpoints[checkpoints.length-1]; player.x=cp.x; player.y=cp.y; player.vy=0; showMessage('Respawned at checkpoint!');}
 
   // retro GUI
@@ -119,10 +138,6 @@ function updateGame(){
 
   requestAnimationFrame(updateGame);
 }
-
-// Controls
-function jump(){ if(player.vy===0) player.vy=-10; }
-function dodge(){ player.x+=20; showMessage('You dodged!'); }
 
 function showMessage(msg){
   const m=document.getElementById('message'); m.textContent=msg;
