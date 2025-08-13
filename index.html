@@ -4,19 +4,68 @@
 <meta charset="UTF-8">
 <title>Eedesiablox</title>
 <style>
-body{margin:0;font-family:'Press Start 2P',monospace;background:linear-gradient(45deg,red,green,yellow,orange);color:#fff;overflow:hidden;}
-#title{font-size:3em;text-align:center;margin:20px;text-shadow:2px2px#000;}
-.panel{display:none;position:absolute;top:80px;left:50%;transform:translateX(-50%);text-align:center;}
-button{margin:5px;padding:10px 20px;font-family:inherit;font-size:1em;background:#222;color:#fff;border:2px solid #fff;cursor:pointer;}
-#chat{position:fixed;bottom:0;left:0;width:100%;display:flex;background:#000a;}
-#messages{flex:1;overflow-y:auto;max-height:150px;padding:5px;}
-#input{width:200px;}
-canvas{background:#000;display:block;margin:0 auto;}
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+body {
+  margin:0;
+  font-family:'Press Start 2P',monospace;
+  background: linear-gradient(45deg, red, orange, yellow, green);
+  color:white;
+  overflow:hidden;
+}
+#title {
+  font-size:3em;
+  text-align:center;
+  margin:20px;
+  text-shadow:2px2px #000;
+}
+.panel {
+  display:none;
+  position:absolute;
+  top:100px;
+  left:50%;
+  transform:translateX(-50%);
+  text-align:center;
+}
+button {
+  margin:5px;
+  padding:10px 20px;
+  font-family:inherit;
+  font-size:1em;
+  background:#222;
+  color:#fff;
+  border:2px solid #fff;
+  cursor:pointer;
+}
+#chat {
+  position:fixed;
+  bottom:0;
+  left:0;
+  width:100%;
+  display:flex;
+  background:#000a;
+}
+#messages {
+  flex:1;
+  overflow-y:auto;
+  max-height:150px;
+  padding:5px;
+}
+#input {
+  width:200px;
+}
+canvas {
+  background:#000;
+  display:block;
+  margin:0 auto;
+  border:2px solid #fff;
+}
 </style>
 </head>
 <body>
+
 <div id="title">Eedesiablox</div>
 
+<!-- Login Panel -->
 <div id="login" class="panel">
 <h2>Login</h2>
 <input id="loginUser" placeholder="Username"><br>
@@ -25,6 +74,7 @@ canvas{background:#000;display:block;margin:0 auto;}
 <button onclick="showSignup()">Sign Up</button>
 </div>
 
+<!-- Sign-up Panel -->
 <div id="signup" class="panel">
 <h2>Sign Up</h2>
 <input id="signUser" placeholder="Username"><br>
@@ -33,23 +83,27 @@ canvas{background:#000;display:block;margin:0 auto;}
 <button onclick="showLogin()">Back to Login</button>
 </div>
 
+<!-- Hub -->
 <div id="hub" class="panel">
 <button onclick="showGame('obby')">Obby</button>
 <button onclick="showGame('tycoon')">Tycoon</button>
 <button onclick="toggleMusic()">Toggle Music</button>
 </div>
 
+<!-- Obby Game -->
 <div id="obby" class="panel">
 <canvas id="obbyCanvas" width="800" height="400"></canvas><br>
 <button onclick="backToHub()">Back to Hub</button>
 </div>
 
+<!-- Tycoon -->
 <div id="tycoon" class="panel">
 <h3>Money: <span id="money">0</span></h3>
 <button onclick="earnMoney(1)">Click to earn</button><br>
 <button onclick="backToHub()">Back to Hub</button>
 </div>
 
+<!-- Chat -->
 <div id="chat">
 <div id="messages"></div>
 <input id="input" placeholder="Message">
@@ -57,40 +111,60 @@ canvas{background:#000;display:block;margin:0 auto;}
 </div>
 
 <audio id="music" src="winds_of_fjords.mp3" loop></audio>
-<script src="/socket.io/socket.io.js"></script>
-<script>
-let currentUser=null; let money=0; const socket=io();
-function showLogin(){document.getElementById('login').style.display='block'; document.getElementById('signup').style.display='none'; document.getElementById('hub').style.display='none';}
-function showSignup(){document.getElementById('signup').style.display='block'; document.getElementById('login').style.display='none';}
-function showHub(){document.getElementById('hub').style.display='block'; document.getElementById('login').style.display='none'; document.getElementById('signup').style.display='none'; document.getElementById('obby').style.display='none'; document.getElementById('tycoon').style.display='none';}
-function showGame(game){document.getElementById(game).style.display='block'; document.getElementById('hub').style.display='none'; if(game==='obby'){startObby();}}
-function login(){const u=document.getElementById('loginUser').value; const p=document.getElementById('loginPass').value;
-fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
-.then(r=>r.json()).then(d=>{currentUser=u; money=d.money; document.getElementById('money').innerText=money; showHub(); socket.emit('join',{username:currentUser,x:50,y:350});}).catch(()=>alert('Login failed'))}
-function signup(){const u=document.getElementById('signUser').value; const p=document.getElementById('signPass').value;
-fetch('/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
-.then(r=>{if(r.ok){alert('Account created'); showLogin();}else alert('Username taken')});}
-function toggleMusic(){let m=document.getElementById('music'); m.paused?m.play():m.pause();}
-function earnMoney(n){money+=n; document.getElementById('money').innerText=money;}
-function backToHub(){showHub();}
-function sendMessage(){let msg=document.getElementById('input').value; if(msg){socket.emit('chat',{user:currentUser,text:msg}); document.getElementById('input').value='';}}
-socket.on('chat',msgs=>{msgs.forEach(m=>{let d=document.createElement('div'); d.innerText=m.user+': '+m.text; document.getElementById('messages').appendChild(d);}); document.getElementById('messages').scrollTop=document.getElementById('messages').scrollHeight;});
-let otherPlayers={};
-socket.on('players',data=>{otherPlayers=data;});
 
-// Obby platformer
+<script>
+let currentUser=null; 
+let money=0;
+
+function showLogin(){document.getElementById('login').style.display='block';document.getElementById('signup').style.display='none';document.getElementById('hub').style.display='none';}
+function showSignup(){document.getElementById('signup').style.display='block';document.getElementById('login').style.display='none';}
+function showHub(){document.getElementById('hub').style.display='block';document.getElementById('login').style.display='none';document.getElementById('signup').style.display='none';document.getElementById('obby').style.display='none';document.getElementById('tycoon').style.display='none';}
+function showGame(game){document.getElementById(game).style.display='block';document.getElementById('hub').style.display='none';if(game==='obby'){startObby();}}
+
+function login(){
+  currentUser=document.getElementById('loginUser').value;
+  money=0; // placeholder for demo
+  showHub();
+}
+function signup(){alert('Account created'); showLogin();}
+function toggleMusic(){let m=document.getElementById('music'); m.paused?m.play():m.pause();}
+function earnMoney(n){money+=n;document.getElementById('money').innerText=money;}
+function backToHub(){showHub();}
+function sendMessage(){let msg=document.getElementById('input').value;if(msg){let d=document.createElement('div');d.innerText=currentUser+': '+msg;document.getElementById('messages').appendChild(d);document.getElementById('input').value='';document.getElementById('messages').scrollTop=document.getElementById('messages').scrollHeight;}}
+
+// Obby Game
 function startObby(){
-const c=document.getElementById('obbyCanvas'); const ctx=c.getContext('2d');
+const c=document.getElementById('obbyCanvas');
+const ctx=c.getContext('2d');
 let player={x:50,y:350,w:20,h:40,vy:0};
-const keys={}; const gravity=0.8;
+const keys={};
+const gravity=0.8;
 const platforms=[{x:0,y:390,w:800,h:10},{x:150,y:300,w:100,h:10},{x:300,y:250,w:100,h:10},{x:450,y:200,w:100,h:10}];
 document.addEventListener('keydown',e=>keys[e.key]=true);
 document.addEventListener('keyup',e=>keys[e.key]=false);
 function loop(){
-ctx.clearRect(0,0,c.width,c.height);
-if(keys['ArrowLeft'])player.x-=4;
-if(keys['ArrowRight'])player.x+=4;
-if(keys['ArrowUp']&&player.vy===0)player.vy=-12;
-player.vy+=gravity; player.y+=player.vy;
-// collision
-platforms.forEach(p=>{if(player.x+player.w>p.x&&player.x<p.x+p.w&&player.y+player.h>p.y&&player.y+player.h<p.y+p.h){player.y=p.y-player.h; player.vy=0;} ctx.fillStyle='white'; ctx.fillRect(p.x,p.y,p.w,p.h);
+  ctx.clearRect(0,0,c.width,c.height);
+  if(keys['ArrowLeft'])player.x-=4;
+  if(keys['ArrowRight'])player.x+=4;
+  if(keys['ArrowUp']&&player.vy===0)player.vy=-12;
+  player.vy+=gravity; player.y+=player.vy;
+  platforms.forEach(p=>{
+    if(player.x+player.w>p.x && player.x<p.x+p.w && player.y+player.h>p.y && player.y+player.h<p.y+p.h){
+      player.y=p.y-player.h;
+      player.vy=0;
+    }
+    ctx.fillStyle='white';
+    ctx.fillRect(p.x,p.y,p.w,p.h);
+  });
+  ctx.fillStyle='red';
+  ctx.fillRect(player.x,player.y,player.w,player.h);
+  requestAnimationFrame(loop);
+}
+loop();
+}
+
+// Start login panel
+showLogin();
+</script>
+</body>
+</html>
