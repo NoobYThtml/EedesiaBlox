@@ -3,124 +3,148 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EedesiaBlox</title>
+<title>Eedesiablox</title>
 <style>
-body,html{margin:0;padding:0;height:100%;overflow:hidden;font-family:Arial, sans-serif;}
-body{background:linear-gradient(135deg,red,yellow,orange,green);color:white;}
-#mainMenu,#obby,#tycoon,#chatBox,#loginBox,#signupBox,#musicBtn,#uiToggle{position:absolute;}
-#mainMenu,#obby,#tycoon,#loginBox,#signupBox{top:50%;left:50%;transform:translate(-50%,-50%);}
-button{padding:10px;margin:5px;border:none;border-radius:5px;cursor:pointer;}
-#chatBox{right:10px;top:50%;transform:translateY(-50%);width:200px;height:300px;overflow-y:auto;background:rgba(0,0,0,0.5);padding:5px;display:none;}
-#chatInput{width:calc(100% - 10px);}
-#musicBtn,#uiToggle{top:10px;}
-#musicBtn{left:10px;}#uiToggle{right:10px;}
-#obbyCanvas{background:#222;width:400px;height:300px;display:block;margin:auto;border:3px solid #fff;}
+body { margin:0; font-family:Verdana,sans-serif; background:linear-gradient(135deg,red,yellow,orange,green); color:#fff; overflow:hidden; }
+header { text-align:center; padding:10px; font-size:2em; text-shadow:2px 2px #000; }
+button { padding:5px 10px; margin:3px; cursor:pointer; }
+#gameContainer, #tycoon { position:absolute; top:60px; left:0; right:0; bottom:0; display:none; background:#111; }
+#chatBox { position:fixed; right:10px; top:50%; transform:translateY(-50%); width:200px; height:300px; background:rgba(0,0,0,0.5); overflow-y:auto; padding:5px; font-size:14px; display:none; }
+#chatInput { width:100%; margin-top:5px; }
+@media(max-width:768px){ #chatBox { width:150px; height:200px; font-size:12px; } #chatInput { font-size:12px; } }
+#uiButtons{position:fixed; top:10px; left:10px;}
 </style>
 </head>
 <body>
 
-<!-- Main Menu -->
+<header>Eedesiablox</header>
+
 <div id="mainMenu">
-<h1>EedesiaBlox</h1>
-<button onclick="showLogin()">Login</button>
-<button onclick="showSignup()">Sign Up</button>
-<button onclick="enterObby()">Play Obby</button>
-<button onclick="enterTycoon()">Play Tycoon</button>
-<button onclick="toggleChat()">Chat</button>
+  <button onclick="showGame()">Play Obby</button>
+  <button onclick="showTycoon()">Play Tycoon</button>
+  <button id="musicBtn">Music: OFF</button>
+  <button onclick="toggleChat()">Chat</button>
+  <button onclick="toggleUI()">Toggle UI</button>
 </div>
 
-<!-- Login -->
-<div id="loginBox" style="display:none;">
-<h2>Login</h2>
-<input id="loginUser" placeholder="Username"><br>
-<input id="loginPass" type="password" placeholder="Password"><br>
-<button onclick="login()">Login</button>
-<button onclick="closeLogin()">Back</button>
-</div>
+<div id="gameContainer"></div>
+<div id="tycoon"></div>
 
-<!-- Signup -->
-<div id="signupBox" style="display:none;">
-<h2>Sign Up</h2>
-<input id="signupUser" placeholder="Username"><br>
-<input id="signupPass" type="password" placeholder="Password"><br>
-<button onclick="signup()">Sign Up</button>
-<button onclick="closeSignup()">Back</button>
-</div>
-
-<!-- Obby -->
-<div id="obby" style="display:none;">
-<canvas id="obbyCanvas"></canvas><br>
-<button onclick="backToHub()">Back to Hub</button>
-</div>
-
-<!-- Tycoon -->
-<div id="tycoon" style="display:none;">
-<h2>Tycoon</h2>
-<button onclick="earnCoin()">Collect Coin</button><br>
-Coins: <span id="coins">0</span><br>
-<button onclick="backToHub()">Back to Hub</button>
-</div>
-
-<!-- Chat -->
 <div id="chatBox">
-<div id="chatMessages"></div>
-<input id="chatInput" placeholder="Type..." onkeydown="if(event.key==='Enter'){sendChat();}">
+  <div id="messages"></div>
+  <input id="chatInput" placeholder="Type..." onkeydown="if(event.key==='Enter'){sendChat();}">
 </div>
 
-<!-- Music & UI Toggle -->
-<button id="musicBtn" onclick="toggleMusic()">Music: On</button>
-<button id="uiToggle" onclick="toggleUI()">Toggle UI</button>
+<audio id="bgMusic" loop>
+  <source src="winds_of_fjords.mp3" type="audio/mpeg">
+</audio>
 
-<audio id="music" loop src="winds_of_fjords.mp3"></audio>
+<div id="uiButtons"></div>
 
 <script>
-// --- Simple Account System ---
-let accounts=JSON.parse(localStorage.getItem('accounts')||'{}'),currentUser=null;
-function showLogin(){document.getElementById('loginBox').style.display='block';document.getElementById('mainMenu').style.display='none';}
-function closeLogin(){document.getElementById('loginBox').style.display='none';document.getElementById('mainMenu').style.display='block';}
-function showSignup(){document.getElementById('signupBox').style.display='block';document.getElementById('mainMenu').style.display='none';}
-function closeSignup(){document.getElementById('signupBox').style.display='none';document.getElementById('mainMenu').style.display='block';}
-function login(){let u=document.getElementById('loginUser').value,p=document.getElementById('loginPass').value;
-if(accounts[u]&&accounts[u]===p){currentUser=u;alert('Logged in');closeLogin();}else alert('Invalid');}
-function signup(){let u=document.getElementById('signupUser').value,p=document.getElementById('signupPass').value;
-if(accounts[u]){alert('Exists');return;}accounts[u]=p;localStorage.setItem('accounts',JSON.stringify(accounts));currentUser=u;alert('Account created');closeSignup();}
+// --- MUSIC ---
+const music = document.getElementById("bgMusic");
+const musicBtn = document.getElementById("musicBtn");
+let musicOn=false;
+musicBtn.onclick = () => {
+  if(!musicOn){ music.play().catch(()=>{}); musicOn=true; musicBtn.textContent="Music: ON"; }
+  else{ music.pause(); musicOn=false; musicBtn.textContent="Music: OFF"; }
+};
 
-// --- UI Toggles ---
-function toggleUI(){document.getElementById('mainMenu').style.display=document.getElementById('mainMenu').style.display==='none'?'block':'none';
-document.getElementById('obby').style.display='none';document.getElementById('tycoon').style.display='none';}
+// --- UI TOGGLE ---
+let uiVisible=true;
+function toggleUI(){ uiVisible=!uiVisible; document.getElementById("mainMenu").style.display=uiVisible?'block':'none'; }
 
-// --- Music ---
-let musicPlaying=true;function toggleMusic(){let m=document.getElementById('music');musicPlaying=!musicPlaying;musicPlaying?m.play():m.pause();
-document.getElementById('musicBtn').innerText='Music: '+(musicPlaying?'On':'Off');}
+// --- CHAT ---
+const chatBox = document.getElementById("chatBox");
+let chatVisible=false;
+function toggleChat(){ chatVisible=!chatVisible; chatBox.style.display=chatVisible?'block':'none'; }
+const messages = document.getElementById("messages");
+let toxicWords=['swear','toxic','sexial content'];
+function sendChat(){
+  const input=document.getElementById("chatInput");
+  let msg=input.value.trim(); if(!msg) return;
+  let banned=false, warn=false, terminate=false;
+  toxicWords.forEach(word=>{
+    if(msg.toLowerCase().includes(word)){
+      if(word==='sexial content') terminate=true;
+      else if(word==='swear') banned=true;
+      else warn=true;
+    }
+  });
+  if(terminate){ alert("Account terminated!"); input.value=''; return; }
+  if(banned){ alert("You are banned for 1h!"); input.value=''; return; }
+  if(warn) alert("Warning: Toxic behavior!");
+  const p=document.createElement("p"); p.textContent=msg; messages.appendChild(p);
+  input.value=''; messages.scrollTop=messages.scrollHeight;
+  setTimeout(()=>{ p.remove(); },30000);
+}
 
-// --- Chat ---
-let chatVisible=false;function toggleChat(){chatVisible=!chatVisible;document.getElementById('chatBox').style.display=chatVisible?'block':'none';}
-function sendChat(){let input=document.getElementById('chatInput'),msg=input.value.trim();if(!msg)return;
-// --- Chat Filter ---
-let bannedWords=['swear1','swear2'],warned=false;
-if(msg.toLowerCase().includes('sexual content')){alert('Account terminated');delete accounts[currentUser];localStorage.setItem('accounts',JSON.stringify(accounts));currentUser=null;toggleChat();return;}
-if(bannedWords.some(w=>msg.toLowerCase().includes(w))){alert('Banned 1h');return;}
-if(msg.toLowerCase().includes('toxic')){if(warned){alert('Banned 1h');return;}else{warned=true;alert('Warned for toxicity');}}
-let chat=document.getElementById('chatMessages');chat.innerHTML+='<div>'+currentUser+': '+msg+'</div>';input.value='';chat.scrollTop=chat.scrollHeight;
-setTimeout(()=>{chat.innerHTML='';},30000);}
+// --- GAME & TYCOON ---
+const gameContainer=document.getElementById("gameContainer");
+const tycoon=document.getElementById("tycoon");
+function showGame(){ gameContainer.style.display='block'; tycoon.style.display='none'; loadObby(); }
+function showTycoon(){ tycoon.style.display='block'; gameContainer.style.display='none'; loadTycoon(); }
 
-// --- Games ---
-let coins=0;
-function enterObby(){document.getElementById('mainMenu').style.display='none';document.getElementById('obby').style.display='block';initObby();}
-function enterTycoon(){document.getElementById('mainMenu').style.display='none';document.getElementById('tycoon').style.display='block';}
-function backToHub(){document.getElementById('obby').style.display='none';document.getElementById('tycoon').style.display='none';document.getElementById('mainMenu').style.display='block';}
-function earnCoin(){coins++;document.getElementById('coins').innerText=coins;}
+// --- MOBILE DETECTION & CONTROLS ---
+const isMobile = /Mobi|Android/i.test(navigator.userAgent);
 
-// --- Obby Platformer ---
-let obbyCanvas,ctx,player={x:50,y:250,w:20,h:20,vx:0,vy:0,jumping:false},keys={};
-function initObby(){obbyCanvas=document.getElementById('obbyCanvas');ctx=obbyCanvas.getContext('2d');document.addEventListener('keydown',e=>keys[e.key]=true);
-document.addEventListener('keyup',e=>keys[e.key]=false);requestAnimationFrame(obbyLoop);}
-function obbyLoop(){ctx.clearRect(0,0,obbyCanvas.width,obbyCanvas.height);
-// --- Basic platform ---
-ctx.fillStyle='white';ctx.fillRect(0,280,400,20);
-player.vx=0;if(keys['ArrowLeft'])player.vx=-2;if(keys['ArrowRight'])player.vx=2;if(keys['ArrowUp']&&!player.jumping){player.vy=-5;player.jumping=true;}
-player.vy+=0.2;player.x+=player.vx;player.y+=player.vy;if(player.y>260){player.y=260;player.vy=0;player.jumping=false;}
-ctx.fillStyle='red';ctx.fillRect(player.x,player.y,player.w,player.h);requestAnimationFrame(obbyLoop);}
+// --- OBby Game ---
+function loadObby(){
+  gameContainer.innerHTML='';
+  const player=document.createElement('div');
+  player.style.width='30px'; player.style.height='30px'; player.style.background='cyan'; player.style.position='absolute'; player.style.left='50px'; player.style.bottom='0px';
+  gameContainer.appendChild(player);
+  let left=false,right=false,jumping=false,y=0,vx=0,vy=0,gravity=0.5;
+  // Obstacles
+  const platforms=[];
+  for(let i=0;i<5;i++){
+    const plat=document.createElement('div');
+    plat.style.width='100px'; plat.style.height='20px'; plat.style.background='red'; plat.style.position='absolute';
+    plat.style.left=50+i*120+'px'; plat.style.bottom=50+i*60+'px';
+    gameContainer.appendChild(plat); platforms.push(plat);
+  }
+  document.onkeydown=e=>{
+    if(e.key==='ArrowLeft') left=true;
+    if(e.key==='ArrowRight') right=true;
+    if(e.key==='ArrowUp' && !jumping){ vy= -10; jumping=true; }
+  };
+  document.onkeyup=e=>{
+    if(e.key==='ArrowLeft') left=false;
+    if(e.key==='ArrowRight') right=false;
+  };
+  function gameLoop(){
+    vx=(right-left)*5; player.style.left=parseFloat(player.style.left)+vx+'px';
+    vy+=gravity; player.style.bottom=parseFloat(player.style.bottom)+vy+'px';
+    if(parseFloat(player.style.bottom)<0){ player.style.bottom='0px'; vy=0; jumping=false; }
+    // Platform collisions
+    platforms.forEach(p=>{
+      const px=parseFloat(p.style.left), py=parseFloat(p.style.bottom), pw=parseFloat(p.style.width), ph=parseFloat(p.style.height);
+      const pl=parseFloat(player.style.left), pb=parseFloat(player.style.bottom), phx=parseFloat(player.style.height);
+      if(pl+30>px && pl<px+pw && pb<py+ph && pb+30>py){
+        player.style.bottom=py+ph+'px'; vy=0; jumping=false;
+      }
+    });
+    requestAnimationFrame(gameLoop);
+  }
+  gameLoop();
+}
+
+// --- Tycoon Clicker Game ---
+function loadTycoon(){
+  tycoon.innerHTML='';
+  const button=document.createElement('button'); button.textContent='Click for Money'; tycoon.appendChild(button);
+  const moneyDisplay=document.createElement('div'); moneyDisplay.textContent='Money: 0'; tycoon.appendChild(moneyDisplay);
+  let money=0;
+  button.onclick=()=>{ money++; moneyDisplay.textContent='Money: '+money; };
+}
+
+// --- PLACEHOLDER: WebSocket Multiplayer ---
+const wsURL="wss://yourserver.example.com";
+let ws;
+// ws = new WebSocket(wsURL);
+// ws.onmessage = (msg)=>{ console.log(msg.data); };
+
 </script>
 </body>
 </html>
