@@ -3,17 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Eedesia Blox</title>
+<title>Eedesia Blox Retro</title>
 <style>
-body {margin:0; font-family:monospace; background:#87CEEB; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; min-height:100vh; color:black;}
-h1,h2 {font-family:monospace; margin:10px;}
-.buttons {display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:20px;}
-.button {padding:10px 20px; cursor:pointer; font-weight:bold; text-align:center; background:white; border:2px solid black; user-select:none;}
-.button.red{background:red;} .green{background:green;} .orange{background:orange;} .yellow{background:yellow;}
-#obby {display:none; text-align:center; margin-top:20px;}
-#gameCanvas {border:2px solid black; background:#87CEEB; display:block; margin:20px auto;}
-#message {margin-top:10px; font-weight:bold;}
-.mobileControls {display:flex; gap:10px; justify-content:center; margin-top:10px;}
+body{margin:0;font-family:monospace;background:#87CEEB;color:black;display:flex;flex-direction:column;align-items:center;}
+h1,h2{margin:5px;}
+.buttons{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:10px;}
+.button{padding:8px 16px;cursor:pointer;font-weight:bold;text-align:center;border:2px solid black;user-select:none;}
+.red{background:red;} .green{background:green;} .orange{background:orange;} .yellow{background:yellow;}
+#obby{display:none;text-align:center;margin-top:10px;}
+#gameCanvas{border:2px solid black;background:#87CEEB;display:block;margin:10px auto;}
+#message{margin-top:5px;font-weight:bold;}
+.mobileControls{display:flex;gap:5px;justify-content:center;margin-top:5px;}
+.retroGUI{position:absolute;top:5px;left:5px;background:rgba(255,255,255,0.7);padding:5px;border:2px solid black;}
 </style>
 </head>
 <body>
@@ -22,19 +23,19 @@ h1,h2 {font-family:monospace; margin:10px;}
   <div class="button red" onclick="showObby()">Obby</div>
   <div class="button green" onclick="alert('Tycoon coming soon!')">Tycoon</div>
   <div class="button orange" onclick="alert('Simulator coming soon!')">Simulator</div>
-  <div class="button yellow" onclick="window.open('https://www.eedesiablox.com','_blank')">Official Website</div>
+  <div class="button yellow" onclick="window.open('https://www.eedesiablox.com','_blank')">Official</div>
   <div class="button" id="musicBtn" onclick="toggleMusic()">Music: Off</div>
 </div>
 
 <div id="obby">
-  <h2>Welcome to Eedesia Obby!</h2>
+  <h2>Eedesia Obby Retro</h2>
   <canvas id="gameCanvas" width="500" height="300"></canvas>
   <div id="message"></div>
   <div class="mobileControls">
     <button onclick="jump()">Jump</button>
     <button onclick="dodge()">Dodge</button>
   </div>
-  <div style="margin-top:10px;">
+  <div style="margin-top:5px;">
     <button onclick="backToHub()">Back to Hub</button>
   </div>
 </div>
@@ -42,76 +43,79 @@ h1,h2 {font-family:monospace; margin:10px;}
 <script>
 // Mobile detection
 if(/Mobi|Android/i.test(navigator.userAgent)){
-  let note=document.createElement('p');
-  note.textContent="Mobile detected! Use the on-screen buttons.";
-  note.style.fontSize="1.1em"; note.style.marginTop="20px";
-  document.body.insertBefore(note, document.getElementById('menu'));
+  let note=document.createElement('p'); note.textContent="Mobile detected! Use on-screen buttons."; document.body.insertBefore(note, document.getElementById('menu'));
 }
 
 // Music toggle
-let audio = new Audio('winds-of-fjords.mp3'); 
-audio.loop = true; let musicOn = false;
-function toggleMusic(){
-  if(musicOn){ audio.pause(); musicOn=false; document.getElementById('musicBtn').textContent="Music: Off"; }
-  else { audio.play(); musicOn=true; document.getElementById('musicBtn').textContent="Music: On"; }
-}
+let audio=new Audio('winds-of-fjords.mp3'); audio.loop=true; let musicOn=false;
+function toggleMusic(){ if(musicOn){audio.pause();musicOn=false;document.getElementById('musicBtn').textContent="Music: Off";} else{audio.play();musicOn=true;document.getElementById('musicBtn').textContent="Music: On";}}
 
 // Menu & Obby
-function showObby(){document.getElementById('menu').style.display='none'; document.getElementById('obby').style.display='block'; startGame();}
-function backToHub(){document.getElementById('obby').style.display='none'; document.getElementById('menu').style.display='flex';}
+function showObby(){document.getElementById('menu').style.display='none';document.getElementById('obby').style.display='block'; startGame();}
+function backToHub(){document.getElementById('obby').style.display='none';document.getElementById('menu').style.display='flex';}
 
-// Platformer logic (Old Roblox style)
-let canvas, ctx, player, gravity=0.6, obstacles=[], finishX=450, messageTimeout;
+// Game setup
+let canvas, ctx, player, gravity=0.6, obstacles=[], finishX=450, level=0, levels, messageTimeout, offsetX=0, checkpoints=[];
+
+levels=[
+  [{x:100,y:250,w:50,h:20},{x:200,y:220,w:60,h:20},{x:300,y:180,w:50,h:20},{x:400,y:240,w:50,h:20}],
+  [{x:50,y:230,w:60,h:20},{x:150,y:200,w:40,h:20},{x:250,y:180,w:70,h:20},{x:380,y:220,w:50,h:20}],
+  [{x:80,y:240,w:50,h:20},{x:180,y:210,w:50,h:20},{x:280,y:190,w:60,h:20},{x:400,y:230,w:40,h:20}]
+];
+
 function startGame(){
   canvas=document.getElementById('gameCanvas'); ctx=canvas.getContext('2d');
   player={x:50,y:200,w:20,h:20,vy:0};
-  obstacles=[
-    {x:100,y:250,w:50,h:20},
-    {x:200,y:220,w:60,h:20},
-    {x:300,y:180,w:50,h:20},
-    {x:400,y:240,w:50,h:20}
-  ];
+  obstacles=JSON.parse(JSON.stringify(levels[level]));
+  offsetX=0;
+  checkpoints=[{x:50,y:200}];
   document.getElementById('message').textContent="";
   requestAnimationFrame(updateGame);
 }
 
 function updateGame(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  
-  // draw platforms
-  ctx.fillStyle='brown';
+
+  offsetX+=1;
+
+  // draw obstacles with simple "ray trace" lighting
   for(let obs of obstacles){
-    ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+    let dx=50-obs.x, dy=50-obs.y, shade=Math.max(0,1-Math.sqrt(dx*dx+dy*dy)/300);
+    ctx.fillStyle=`rgba(${100+shade*155},${50+shade*100},0,1)`;
+    ctx.fillRect(obs.x-offsetX,obs.y,obs.w,obs.h);
   }
 
-  // draw player
-  player.vy += gravity; player.y += player.vy;
+  // draw finish
+  ctx.fillStyle='gold';
+  ctx.fillRect(finishX-offsetX,250,10,20);
 
-  // collision
+  // physics
+  player.vy+=gravity; player.y+=player.vy;
+
   let onGround=false;
   for(let obs of obstacles){
-    if(player.x + player.w > obs.x && player.x < obs.x + obs.w && player.y + player.h > obs.y && player.y + player.h < obs.y + player.vy+obs.h){
-      player.y = obs.y - player.h;
-      player.vy = 0;
-      onGround = true;
+    if(player.x+player.w>obs.x-offsetX && player.x<obs.x-offsetX+obs.w && player.y+player.h>obs.y && player.y+player.h<player.vy+obs.y+obs.h){
+      player.y=obs.y-player.h; player.vy=0; onGround=true;
+      // checkpoint
+      if(!checkpoints.find(c=>c.x===obs.x)){checkpoints.push({x:player.x,y:player.y});}
     }
   }
+  if(player.y+player.h>270){player.y=270-player.h;player.vy=0;onGround=true;}
 
-  // ground collision
-  if(player.y + player.h > 270){player.y=270-player.h; player.vy=0; onGround=true;}
+  // draw player with shadow
+  ctx.fillStyle='red'; ctx.fillRect(player.x,player.y,player.w,player.h);
+  ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.fillRect(player.x+5,player.y+5,player.w,player.h);
 
-  // draw player
-  ctx.fillStyle='red'; ctx.fillRect(player.x, player.y, player.w, player.h);
+  // finish check
+  if(player.x+player.w>=finishX){ level++; if(level>=levels.length){showMessage('You completed all levels!'); setTimeout(backToHub,1500); return;} showMessage('Level complete!'); setTimeout(startGame,1000); return;}
 
-  // move forward gradually
-  player.x += 2;
+  // fall respawn at last checkpoint
+  if(player.y>300){ let cp=checkpoints[checkpoints.length-1]; player.x=cp.x; player.y=cp.y; player.vy=0; showMessage('Respawned at checkpoint!');}
 
-  // finish line
-  ctx.fillStyle='gold'; ctx.fillRect(finishX,250,10,20);
-  if(player.x + player.w >= finishX){ showMessage('You finished the Obby!'); setTimeout(backToHub,1000); return;}
-
-  // falling off
-  if(player.y > 300){ showMessage('You fell! Restarting...'); startGame(); return; }
+  // retro GUI
+  ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.fillRect(5,5,120,40);
+  ctx.strokeStyle='black'; ctx.strokeRect(5,5,120,40);
+  ctx.fillStyle='black'; ctx.fillText(`Level: ${level+1}`,10,20); ctx.fillText(`Checkpoints: ${checkpoints.length}`,10,35);
 
   requestAnimationFrame(updateGame);
 }
@@ -121,8 +125,7 @@ function jump(){ if(player.vy===0) player.vy=-10; }
 function dodge(){ player.x+=20; showMessage('You dodged!'); }
 
 function showMessage(msg){
-  const m=document.getElementById('message');
-  m.textContent=msg;
+  const m=document.getElementById('message'); m.textContent=msg;
   clearTimeout(messageTimeout);
   messageTimeout=setTimeout(()=>{m.textContent='';},1000);
 }
