@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Eedesia Blox Retro Platformer</title>
 <style>
-body{margin:0;font-family:monospace;background:#87CEEB;color:black;display:flex;flex-direction:column;align-items:center;}
+body{margin:0;font-family:monospace;background:linear-gradient(135deg,red,green,orange,yellow);color:black;display:flex;flex-direction:column;align-items:center;}
 h1,h2{margin:5px;}
 .buttons{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:10px;}
 .button{padding:8px 16px;cursor:pointer;font-weight:bold;text-align:center;border:2px solid black;user-select:none;}
@@ -78,16 +78,19 @@ document.addEventListener('keydown',e=>{keys[e.key]=true;});
 document.addEventListener('keyup',e=>{keys[e.key]=false;});
 function moveLeft(){ keys['ArrowLeft']=true; setTimeout(()=>{keys['ArrowLeft']=false;},100);}
 function moveRight(){ keys['ArrowRight']=true; setTimeout(()=>{keys['ArrowRight']=false;},100);}
-function jump(){ if(onGround) player.vy=-10; }
+function jump(){ if(onGround){ player.vy=-10; onGround=false; } }
 
 let onGround=false;
 
 function updateGame(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // movement
+  // horizontal movement always works, jump only triggers from ground
   if(keys['ArrowLeft']||keys['a']) player.x-=3;
   if(keys['ArrowRight']||keys['d']) player.x+=3;
+  if((keys['ArrowUp']||keys['w']||keys[' ']) && onGround){ player.vy=-10; onGround=false; }
+
+  // gravity
   player.vy+=gravity; player.y+=player.vy;
 
   // collisions
@@ -106,7 +109,7 @@ function updateGame(){
 
   if(player.y+player.h>270){player.y=270-player.h;player.vy=0;onGround=true;}
 
-  // draw obstacles with simple shading
+  // draw obstacles with shading
   for(let obs of obstacles){
     let dx=50-obs.x, dy=50-obs.y, shade=Math.max(0,1-Math.sqrt(dx*dx+dy*dy)/300);
     ctx.fillStyle=`rgba(${100+shade*155},${50+shade*100},0,1)`;
@@ -116,7 +119,7 @@ function updateGame(){
   // draw finish
   ctx.fillStyle='gold'; ctx.fillRect(finishX,250,10,20);
 
-  // draw player with shadow
+  // draw player
   ctx.fillStyle='red'; ctx.fillRect(player.x,player.y,player.w,player.h);
   ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.fillRect(player.x+5,player.y+5,player.w,player.h);
 
