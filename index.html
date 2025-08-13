@@ -5,18 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Eedesiablox</title>
 <style>
-body, html{margin:0;padding:0;height:100%;overflow:hidden;font-family:Verdana, sans-serif;}
-body{background:linear-gradient(135deg, red, orange, yellow, green);}
-#ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
-button, input{pointer-events:auto;padding:5px;margin:3px;font-size:14px;}
-#menu,#login,#chat,#games,#musicbtn{position:absolute;background:#ccc;border:2px solid #000;border-radius:4px;padding:5px;}
-#menu{top:10px;left:10px;}#login{top:10px;right:10px;}#games{bottom:10px;left:10px;}#chat{bottom:10px;right:10px;width:200px;height:150px;overflow:auto;}
-canvas{display:block;}
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;font-family:Verdana,sans-serif;}
+body{background:linear-gradient(135deg,red,orange,yellow,green);}
+canvas{display:block;position:absolute;top:0;left:0;}
+#menu,#login,#chat,#multiplier{position:absolute;background:#ccc;border:2px solid #000;border-radius:4px;padding:5px;pointer-events:auto;}
+#menu{top:10px;left:10px;}
+#login{top:10px;right:10px;}
+#chat{bottom:10px;right:10px;width:220px;height:150px;overflow:auto;}
+#multiplier{bottom:10px;left:10px;font-weight:bold;font-size:16px;}
+button,input{padding:5px;margin:2px;font-size:14px;}
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
-<div id="ui">
 <div id="menu">
 <h3>Eedesiablox</h3>
 <button onclick="showObby()">Obby</button>
@@ -30,8 +31,7 @@ canvas{display:block;}
 <button onclick="signup()">Sign Up</button>
 </div>
 <div id="chat"></div>
-<div id="games"></div>
-</div>
+<div id="multiplier">Multiplier: x1</div>
 <audio id="music" loop>
 <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_5d1ee0f6c5.mp3?filename=calm-synthwave-11089.mp3" type="audio/mpeg">
 </audio>
@@ -53,12 +53,16 @@ function login(){
   if(localStorage.getItem(u)===p){alert("Logged In!");}else{alert("Wrong credentials");}
 }
 
-// Chat (local only)
+// Chat system
 const chat=document.getElementById("chat");
 function addChat(msg){const d=document.createElement("div");d.textContent=msg;chat.appendChild(d);chat.scrollTop=chat.scrollHeight;}
 addChat("Welcome to Eedesiablox chat!");
 
-// Game canvas
+// Multiplier
+let multiplier=1;
+function updateMultiplier(val){multiplier=val;document.getElementById("multiplier").innerText="Multiplier: x"+multiplier;}
+
+// Canvas game setup
 const c=document.getElementById("game"),ctx=c.getContext("2d");
 let W=window.innerWidth,H=window.innerHeight;c.width=W;c.height=H;
 let keys={};
@@ -68,11 +72,13 @@ window.addEventListener("keyup",e=>keys[e.key]=false);
 // Player
 let player={x:100,y:H-50,w:30,h:50,vy:0,jumping:false,color:"blue"};
 
-// Platforms
+// Platforms (Obby)
 let platforms=[{x:0,y:H-20,w:W,h:20}];
+for(let i=1;i<12;i++){platforms.push({x:i*120+50,y:H-20-40*i,w:80,h:20});}
 
-// Simple Obby generator
-for(let i=1;i<10;i++){platforms.push({x:i*100+50,y:H-20-50*i,w:80,h:20});}
+// Checkpoints
+let checkpoints=[{x:50,y:H-60},{x:300,y:H-180},{x:650,y:H-400}];
+let lastCheckpoint={x:50,y:H-60};
 
 // Main loop
 function loop(){
@@ -91,6 +97,16 @@ function loop(){
       player.jumping=false;
     }
   });
+  // Checkpoint detection
+  checkpoints.forEach(c=>{
+    if(player.x>c.x-15 && player.x<c.x+15 && player.y>c.y-15 && player.y<c.y+15){
+      lastCheckpoint=c;
+      updateMultiplier(multiplier+0.1);
+    }
+  });
+  // Fall below screen => reset
+  if(player.y>H){player.x=lastCheckpoint.x;player.y=lastCheckpoint.y;player.vy=0;}
+  // Jump
   if(keys[" "] && !player.jumping){player.vy=-10;player.jumping=true;}
   // Draw player
   ctx.fillStyle=player.color;ctx.fillRect(player.x,player.y,player.w,player.h);
@@ -102,10 +118,9 @@ loop();
 function showObby(){addChat("Obby selected");}
 function showTycoon(){addChat("Tycoon selected");}
 
-// Mobile detection & simple buttons
+// Mobile controls
 if(/Mobi|Android/i.test(navigator.userAgent)){
   addChat("Mobile mode detected");
-  // Add touch buttons
   let left=document.createElement("button"),right=document.createElement("button"),jump=document.createElement("button");
   left.textContent="◀";right.textContent="▶";jump.textContent="▲";
   left.style.position=right.style.position=jump.style.position="absolute";
