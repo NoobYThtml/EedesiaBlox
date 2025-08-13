@@ -5,130 +5,129 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Eedesiablox</title>
 <style>
-html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;font-family:Verdana,sans-serif;}
-body{background:linear-gradient(135deg,red,orange,yellow,green);}
-canvas{display:block;position:absolute;top:0;left:0;}
-#menu,#login,#chat,#multiplier{position:absolute;background:#ccc;border:2px solid #000;border-radius:4px;padding:5px;pointer-events:auto;}
-#menu{top:10px;left:10px;}
-#login{top:10px;right:10px;}
-#chat{bottom:10px;right:10px;width:220px;height:150px;overflow:auto;}
-#multiplier{bottom:10px;left:10px;font-weight:bold;font-size:16px;}
-button,input{padding:5px;margin:2px;font-size:14px;}
+  body {margin:0;padding:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,red,yellow,orange,green);color:#000;}
+  #menu,#game{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  button{margin:5px;padding:8px 12px;font-size:14px;cursor:pointer;border:2px solid #000;background:#fff;border-radius:4px;}
+  #chat-container{position:absolute;top:50%;right:10px;transform:translateY(-50%);width:180px;height:auto;display:none;background:#ccc;border:2px solid #000;border-radius:4px;padding:5px;font-size:12px;z-index:999;}
+  #chat-messages{height:120px;overflow:auto;margin-bottom:5px;}
+  #game-canvas{border:2px solid #000;background:#eef;width:90%;height:50%;margin-top:10px;}
 </style>
 </head>
 <body>
-<canvas id="game"></canvas>
+
 <div id="menu">
-<h3>Eedesiablox</h3>
-<button onclick="showObby()">Obby</button>
-<button onclick="showTycoon()">Tycoon</button>
-<button id="musicbtn" onclick="toggleMusic()">Music On/Off</button>
+  <h1>Eedesiablox</h1>
+  <button id="play-btn">Play Obby</button>
+  <button id="music-toggle">Toggle Music</button>
+  <button id="multiplier-btn">Multiplier: x1</button>
 </div>
-<div id="login">
-<input id="user" placeholder="Username"><br>
-<input id="pass" type="password" placeholder="Password"><br>
-<button onclick="login()">Login</button>
-<button onclick="signup()">Sign Up</button>
+
+<div id="game" style="display:none;">
+  <canvas id="game-canvas"></canvas>
+  <button id="back-btn">Back to Hub</button>
 </div>
-<div id="chat"></div>
-<div id="multiplier">Multiplier: x1</div>
-<audio id="music" loop>
-<source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_5d1ee0f6c5.mp3?filename=calm-synthwave-11089.mp3" type="audio/mpeg">
-</audio>
+
+<div id="chat-container">
+  <div id="chat-messages"></div>
+  <input id="chat-input" type="text" placeholder="Type...">
+</div>
+
+<audio id="bg-music" loop src="winds_of_fjords.mp3"></audio>
+
 <script>
-// Music toggle
-const music=document.getElementById("music");
-let musicOn=false;
-function toggleMusic(){musicOn=!musicOn;if(musicOn){music.play();}else{music.pause();}}
-
-// Login system (localStorage)
-function signup(){
-  const u=document.getElementById("user").value;
-  const p=document.getElementById("pass").value;
-  if(u&&p){localStorage.setItem(u,p);alert("Signed Up!");}
-}
-function login(){
-  const u=document.getElementById("user").value;
-  const p=document.getElementById("pass").value;
-  if(localStorage.getItem(u)===p){alert("Logged In!");}else{alert("Wrong credentials");}
-}
-
-// Chat system
-const chat=document.getElementById("chat");
-function addChat(msg){const d=document.createElement("div");d.textContent=msg;chat.appendChild(d);chat.scrollTop=chat.scrollHeight;}
-addChat("Welcome to Eedesiablox chat!");
-
-// Multiplier
+// Elements
+const menu=document.getElementById("menu");
+const game=document.getElementById("game");
+const playBtn=document.getElementById("play-btn");
+const backBtn=document.getElementById("back-btn");
+const musicBtn=document.getElementById("music-toggle");
+const multiplierBtn=document.getElementById("multiplier-btn");
+const music=document.getElementById("bg-music");
+const chatContainer=document.getElementById("chat-container");
+const chatMessages=document.getElementById("chat-messages");
+const chatInput=document.getElementById("chat-input");
 let multiplier=1;
-function updateMultiplier(val){multiplier=val;document.getElementById("multiplier").innerText="Multiplier: x"+multiplier;}
 
-// Canvas game setup
-const c=document.getElementById("game"),ctx=c.getContext("2d");
-let W=window.innerWidth,H=window.innerHeight;c.width=W;c.height=H;
+// Mobile detection
+if(/Mobi|Android/i.test(navigator.userAgent)){
+  chatContainer.style.display="block";
+}
+
+// Chat functions
+let chatTimeout;
+function showChat(){
+  chatContainer.style.display="block";
+  if(chatTimeout) clearTimeout(chatTimeout);
+  chatTimeout=setTimeout(()=>{chatContainer.style.display="none";},30000);
+}
+function addChatMessage(msg){
+  const div=document.createElement("div");
+  div.textContent=msg;
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop=chatMessages.scrollHeight;
+  showChat();
+}
+chatInput.addEventListener("keydown",e=>{
+  if(e.key==="Enter" && chatInput.value.trim()!==""){
+    addChatMessage("You: "+chatInput.value);
+    chatInput.value="";
+  }
+});
+// Simulated multiplayer messages
+setInterval(()=>{
+  const fakeUsers=["Alice","Bob","Charlie"];
+  addChatMessage(fakeUsers[Math.floor(Math.random()*fakeUsers.length)]+": Hello!");
+},15000);
+
+// Menu buttons
+playBtn.onclick=()=>{
+  menu.style.display="none";
+  game.style.display="flex";
+  initObby();
+};
+backBtn.onclick=()=>{
+  menu.style.display="flex";
+  game.style.display="none";
+};
+musicBtn.onclick=()=>music.paused?music.play():music.pause();
+multiplierBtn.onclick=()=>{
+  multiplier=multiplier>=5?1:multiplier+1;
+  multiplierBtn.textContent="Multiplier: x"+multiplier;
+};
+
+// Simple Obby
+const canvas=document.getElementById("game-canvas");
+const ctx=canvas.getContext("2d");
+let player={x:50,y:200,width:30,height:30,vy:0,jumping:false};
+let platforms=[{x:0,y:250,width:300,height:20},{x:350,y:200,width:150,height:20},{x:550,y:150,width:100,height:20}];
 let keys={};
-window.addEventListener("keydown",e=>keys[e.key]=true);
-window.addEventListener("keyup",e=>keys[e.key]=false);
-
-// Player
-let player={x:100,y:H-50,w:30,h:50,vy:0,jumping:false,color:"blue"};
-
-// Platforms (Obby)
-let platforms=[{x:0,y:H-20,w:W,h:20}];
-for(let i=1;i<12;i++){platforms.push({x:i*120+50,y:H-20-40*i,w:80,h:20});}
-
-// Checkpoints
-let checkpoints=[{x:50,y:H-60},{x:300,y:H-180},{x:650,y:H-400}];
-let lastCheckpoint={x:50,y:H-60};
-
-// Main loop
-function loop(){
-  ctx.clearRect(0,0,W,H);
-  // Player physics
-  player.vy+=0.5;player.y+=player.vy;
-  if(keys["ArrowLeft"])player.x-=5;
-  if(keys["ArrowRight"])player.x+=5;
-  // Collision
+function initObby(){
+  player.y=200;
+  player.vy=0;
+  requestAnimationFrame(gameLoop);
+}
+document.addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
+document.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+function gameLoop(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // player movement
+  if(keys["a"]) player.x-=3;
+  if(keys["d"]) player.x+=3;
+  if(keys["w"] && !player.jumping){player.vy=-8;player.jumping=true;}
+  player.vy+=0.3; player.y+=player.vy;
+  // collision
   platforms.forEach(p=>{
-    ctx.fillStyle="black";
-    ctx.fillRect(p.x,p.y,p.w,p.h);
-    if(player.x< p.x+p.w && player.x+player.w>p.x && player.y< p.y+p.h && player.y+player.h>p.y && player.vy>=0){
-      player.y=p.y-player.h;
+    if(player.x< p.x+p.width && player.x+player.width>p.x && player.y< p.y+p.height && player.y+player.height>p.y){
+      player.y=p.y-player.height;
       player.vy=0;
       player.jumping=false;
     }
+    ctx.fillStyle="#888"; ctx.fillRect(p.x,p.y,p.width,p.height);
   });
-  // Checkpoint detection
-  checkpoints.forEach(c=>{
-    if(player.x>c.x-15 && player.x<c.x+15 && player.y>c.y-15 && player.y<c.y+15){
-      lastCheckpoint=c;
-      updateMultiplier(multiplier+0.1);
-    }
-  });
-  // Fall below screen => reset
-  if(player.y>H){player.x=lastCheckpoint.x;player.y=lastCheckpoint.y;player.vy=0;}
-  // Jump
-  if(keys[" "] && !player.jumping){player.vy=-10;player.jumping=true;}
-  // Draw player
-  ctx.fillStyle=player.color;ctx.fillRect(player.x,player.y,player.w,player.h);
-  requestAnimationFrame(loop);
-}
-loop();
-
-// Show games
-function showObby(){addChat("Obby selected");}
-function showTycoon(){addChat("Tycoon selected");}
-
-// Mobile controls
-if(/Mobi|Android/i.test(navigator.userAgent)){
-  addChat("Mobile mode detected");
-  let left=document.createElement("button"),right=document.createElement("button"),jump=document.createElement("button");
-  left.textContent="◀";right.textContent="▶";jump.textContent="▲";
-  left.style.position=right.style.position=jump.style.position="absolute";
-  left.style.bottom=right.style.bottom=jump.style.bottom="50px";
-  left.style.left="10px";right.style.left="60px";jump.style.right="10px";
-  left.onclick=()=>player.x-=5;right.onclick=()=>player.x+=5;jump.onclick=()=>{if(!player.jumping){player.vy=-10;player.jumping=true;}};
-  document.body.appendChild(left);document.body.appendChild(right);document.body.appendChild(jump);
+  ctx.fillStyle="#f00"; ctx.fillRect(player.x,player.y,player.width,player.height);
+  requestAnimationFrame(gameLoop);
 }
 </script>
+
 </body>
 </html>
