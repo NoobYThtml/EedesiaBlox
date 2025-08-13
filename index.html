@@ -2,132 +2,77 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Eedesiablox</title>
+<title>EedesiaBlox</title>
 <style>
-  body {margin:0;padding:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,red,yellow,orange,green);color:#000;}
-  .screen{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-  button{margin:5px;padding:8px 12px;font-size:14px;cursor:pointer;border:2px solid #000;background:#fff;border-radius:4px;}
-  #chat-container{position:absolute;top:50%;right:10px;transform:translateY(-50%);width:180px;height:auto;display:none;background:#ccc;border:2px solid #000;border-radius:4px;padding:5px;font-size:12px;z-index:999;}
-  #chat-messages{height:120px;overflow:auto;margin-bottom:5px;}
-  #game-canvas{border:2px solid #000;background:#eef;width:90%;height:50%;margin-top:10px;}
-  input{padding:4px;margin:3px;}
+body{margin:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,red,orange,yellow,green);color:#fff;overflow:hidden;}
+#ui{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;}
+button{margin:5px;padding:10px;background:#222;color:#fff;border:1px solid #fff;cursor:pointer;}
+#chat{position:absolute;right:10px;bottom:10px;width:200px;height:250px;background:#0008;padding:5px;overflow-y:auto;font-size:14px;display:none;}
+#chatInput{width:100%;box-sizing:border-box;}
+#gameArea{width:80%;height:60%;background:#0008;margin-top:10px;position:relative;}
 </style>
 </head>
 <body>
-
-<!-- Screens -->
-<div id="login-screen" class="screen">
-  <h2>Login / Sign-Up</h2>
-  <input id="username" placeholder="Username">
-  <input id="password" type="password" placeholder="Password">
-  <button id="login-btn">Login</button>
-  <button id="signup-btn">Sign-Up</button>
-  <div id="login-msg"></div>
+<div id="ui">
+<h1>EedesiaBlox</h1>
+<div id="buttons">
+<button onclick="showObby()">Play Obby</button>
+<button onclick="showTycoon()">Play Tycoon</button>
+<button onclick="toggleMusic()">Music</button>
+<button onclick="toggleChat()">Chat</button>
 </div>
-
-<div id="menu" class="screen" style="display:none;">
-  <h1>Eedesiablox</h1>
-  <button id="play-btn">Play Obby</button>
-  <button id="tycoon-btn">Play Tycoon</button>
-  <button id="music-toggle">Toggle Music</button>
-  <button id="multiplier-btn">Multiplier: x1</button>
+<div id="gameArea"></div>
 </div>
-
-<div id="game" class="screen" style="display:none;">
-  <canvas id="game-canvas"></canvas>
-  <button id="back-btn">Back to Hub</button>
+<div id="chat">
+<div id="messages"></div>
+<input type="text" id="chatInput" placeholder="Type..." onkeydown="if(event.key==='Enter')sendMessage()">
 </div>
-
-<div id="tycoon" class="screen" style="display:none;">
-  <h2>Tycoon Game</h2>
-  <p>Build your empire!</p>
-  <button id="back-tycoon">Back to Hub</button>
-</div>
-
-<div id="chat-container">
-  <div id="chat-messages"></div>
-  <input id="chat-input" type="text" placeholder="Type...">
-</div>
-
-<audio id="bg-music" loop src="winds_of_fjords.mp3"></audio>
-
 <script>
-// ===== Account System =====
-let accounts=JSON.parse(localStorage.getItem("eedesiabloxAccounts")||"{}");
-const loginScreen=document.getElementById("login-screen");
-const loginMsg=document.getElementById("login-msg");
-const menu=document.getElementById("menu");
-document.getElementById("signup-btn").onclick=()=>{
-  const u=document.getElementById("username").value.trim();
-  const p=document.getElementById("password").value.trim();
-  if(!u||!p){loginMsg.textContent="Fill all fields";return;}
-  if(accounts[u]){loginMsg.textContent="Username exists";return;}
-  accounts[u]=p;
-  localStorage.setItem("eedesiabloxAccounts",JSON.stringify(accounts));
-  loginMsg.textContent="Account created!";
-};
-document.getElementById("login-btn").onclick=()=>{
-  const u=document.getElementById("username").value.trim();
-  const p=document.getElementById("password").value.trim();
-  if(accounts[u]===p){loginScreen.style.display="none";menu.style.display="flex";} 
-  else loginMsg.textContent="Invalid login";
-};
+let musicOn=false, chatVisible=false, chatTimeout, messages=[], warnings={}, banned={};
+let toxicWords=["badword1","badword2"], warnLimit=1, banTime=24*60*60*1000;
 
-// ===== Menu Buttons =====
-const playBtn=document.getElementById("play-btn");
-const tycoonBtn=document.getElementById("tycoon-btn");
-const backBtn=document.getElementById("back-btn");
-const backTycoon=document.getElementById("back-tycoon");
-const musicBtn=document.getElementById("music-toggle");
-const multiplierBtn=document.getElementById("multiplier-btn");
-const music=document.getElementById("bg-music");
-let multiplier=1;
+function toggleMusic(){musicOn=!musicOn;if(musicOn)playMusic();else stopMusic();}
+function playMusic(){let a=new Audio("winds_of_fjords.mp3");a.loop=true;a.play();}
+function stopMusic(){document.querySelectorAll("audio").forEach(a=>a.pause());}
+function toggleChat(){chatVisible=!chatVisible;document.getElementById("chat").style.display=chatVisible?"block":"none";if(chatVisible){chatTimeout=setTimeout(()=>{toggleChat();},30000);}}
+function sendMessage(){let input=document.getElementById("chatInput");let msg=input.value;input.value="";if(checkToxic("You",msg))return;messages.push(msg);updateChat();}
+function updateChat(){document.getElementById("messages").innerHTML=messages.join("<br>");}
+function checkToxic(user,msg){let lower=msg.toLowerCase();for(let w of toxicWords){if(lower.includes(w)){warnings[user]=(warnings[user]||0)+1;if(warnings[user]>warnLimit){banned[user]=Date.now()+banTime;alert("You are banned 1 day");return true;}else{alert("Warning!");return true;}}}return false;}
 
-playBtn.onclick=()=>{menu.style.display="none";game.style.display="flex";initObby();}
-tycoonBtn.onclick=()=>{menu.style.display="none";tycoon.style.display="flex";}
-backBtn.onclick=()=>{menu.style.display="flex";game.style.display="none";}
-backTycoon.onclick=()=>{menu.style.display="flex";tycoon.style.display="none";}
-musicBtn.onclick=()=>music.paused?music.play():music.pause();
-multiplierBtn.onclick=()=>{multiplier=multiplier>=5?1:multiplier+1; multiplierBtn.textContent="Multiplier: x"+multiplier;}
-
-// ===== Chat =====
-const chatContainer=document.getElementById("chat-container");
-const chatMessages=document.getElementById("chat-messages");
-const chatInput=document.getElementById("chat-input");
-let chatTimeout;
-function showChat(){chatContainer.style.display="block"; if(chatTimeout) clearTimeout(chatTimeout); chatTimeout=setTimeout(()=>{chatContainer.style.display="none";},30000);}
-function addChatMessage(msg){const div=document.createElement("div"); div.textContent=msg; chatMessages.appendChild(div); chatMessages.scrollTop=chatMessages.scrollHeight; showChat();}
-chatInput.addEventListener("keydown",e=>{if(e.key==="Enter" && chatInput.value.trim()!==""){addChatMessage("You: "+chatInput.value); chatInput.value="";}});
-
-// Show chat on mobile
-if(/Mobi|Android/i.test(navigator.userAgent)) showChat();
-
-// ===== Obby =====
-const canvas=document.getElementById("game-canvas");
-const ctx=canvas.getContext("2d");
-let player={x:50,y:200,width:30,height:30,vy:0,jumping:false};
-let platforms=[{x:0,y:250,width:300,height:20},{x:350,y:200,width:150,height:20},{x:550,y:150,width:100,height:20}];
+function showObby(){
+let area=document.getElementById("gameArea");area.innerHTML="";
+let canvas=document.createElement("canvas");canvas.width=area.clientWidth;canvas.height=area.clientHeight;area.appendChild(canvas);
+let ctx=canvas.getContext("2d");
+let player={x:50,y:300,width:20,height:40,vy:0,jumping:false};
+let gravity=0.8;
 let keys={};
-function initObby(){player.y=200;player.vy=0;requestAnimationFrame(gameLoop);}
-document.addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
-document.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
-function gameLoop(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  if(keys["a"]) player.x-=3;
-  if(keys["d"]) player.x+=3;
-  if(keys["w"] && !player.jumping){player.vy=-8;player.jumping=true;}
-  player.vy+=0.3; player.y+=player.vy;
-  platforms.forEach(p=>{
-    if(player.x< p.x+p.width && player.x+player.width>p.x && player.y< p.y+p.height && player.y+player.height>p.y){
-      player.y=p.y-player.height; player.vy=0; player.jumping=false;
-    }
-    ctx.fillStyle="#888"; ctx.fillRect(p.x,p.y,p.width,p.height);
-  });
-  ctx.fillStyle="#f00"; ctx.fillRect(player.x,player.y,player.width,player.height);
-  requestAnimationFrame(gameLoop);
-}
-</script>
+let platforms=[{x:0,y:350,width:canvas.width,height:10},{x:100,y:300,width:50,height:10},{x:200,y:250,width:50,height:10}];
 
+document.onkeydown=e=>keys[e.key]=true;
+document.onkeyup=e=>keys[e.key]=false;
+
+function loop(){
+ctx.clearRect(0,0,canvas.width,canvas.height);
+player.vy+=gravity;player.y+=player.vy;
+if(keys["ArrowLeft"])player.x-=4;if(keys["ArrowRight"])player.x+=4;
+if(keys["ArrowUp"]&&!player.jumping){player.vy=-12;player.jumping=true;}
+
+// collision
+player.jumping=true;
+for(let p of platforms){
+ctx.fillStyle="red";ctx.fillRect(p.x,p.y,p.width,p.height);
+if(player.x< p.x+p.width && player.x+player.width>p.x && player.y< p.y+p.height && player.y+player.height>p.y){
+player.y=p.y-player.height;player.vy=0;player.jumping=false;
+}
+}
+
+ctx.fillStyle="blue";ctx.fillRect(player.x,player.y,player.width,player.height);
+requestAnimationFrame(loop);}
+loop();
+}
+
+function showTycoon(){document.getElementById("gameArea").innerHTML="<h2>Tycoon Game Coming Soon!</h2>";}
+if(/Mobi|Android/i.test(navigator.userAgent)){document.getElementById("buttons").innerHTML+="<br><button onclick='alert(\"Mobile Controls Enabled\")'>Mobile Controls</button>";}
+</script>
 </body>
 </html>
