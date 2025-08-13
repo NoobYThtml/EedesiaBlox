@@ -5,59 +5,145 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Eedesiablox</title>
 <style>
-  /* Gradient background */
-  body {
-    margin:0; padding:0;
-    font-family: 'Arial', sans-serif;
-    background: linear-gradient(45deg, red, orange, yellow, green);
-    overflow:hidden;
-    color:white;
-  }
-  #ui {
-    position:absolute; top:10px; left:10px;
-    display:flex; flex-direction:column; gap:10px;
-    z-index:100;
-  }
-  button {
-    font-size:18px; padding:10px;
-    background:rgba(0,0,0,0.5); border:none;
-    color:white; cursor:pointer;
-  }
-  #chat { position:absolute; bottom:10px; left:10px; width:200px; max-height:150px; overflow-y:auto; background:rgba(0,0,0,0.5); padding:5px; font-size:14px;}
-  #messages {max-height:120px; overflow-y:auto;}
-  #input {width:100%;}
-  canvas {background:black; display:block; margin:0 auto;}
+body{margin:0;padding:0;font-family:'Courier New',monospace;
+background:linear-gradient(135deg,red,orange,yellow,green);color:white;overflow:hidden;}
+#ui{position:absolute;top:10px;left:10px;display:flex;flex-direction:column;gap:10px;z-index:100;}
+button,input{font-family:'Courier New',monospace;font-size:16px;padding:6px;background:#222;border:2px solid #fff;color:white;cursor:pointer;}
+input{background:#333;}
+#chat{position:absolute;bottom:10px;left:10px;width:220px;max-height:150px;overflow-y:auto;background:#222;padding:5px;border:2px solid white;font-size:14px;}
+#messages{max-height:120px;overflow-y:auto;}
+canvas{display:block;margin:0 auto;background:black;touch-action:none;border:4px solid white;}
+#mobileControls{position:absolute;bottom:0;left:50%;transform:translateX(-50%);display:flex;gap:20px;z-index:100;}
+.mobileBtn{padding:15px;background:#222;border:2px solid white;color:white;font-size:20px;}
+button:hover,input:focus{outline:none;border-color:yellow;}
 </style>
 </head>
 <body>
 
 <div id="ui">
-  <div id="login">
-    <input id="username" placeholder="Username">
-    <input id="password" type="password" placeholder="Password">
-    <button onclick="login()">Login</button>
-    <button onclick="signup()">Sign Up</button>
-  </div>
-  <div id="menu" style="display:none;">
-    <button onclick="startGame('obby')">Obby</button>
-    <button onclick="startGame('tycoon')">Tycoon</button>
-    <button onclick="toggleMusic()">Music On/Off</button>
-  </div>
+<div id="login">
+<input id="username" placeholder="Username">
+<input id="password" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+<button onclick="signup()">Sign Up</button>
+</div>
+
+<div id="menu" style="display:none;">
+<button onclick="startGame('obby')">Obby</button>
+<button onclick="startGame('tycoon')">Tycoon</button>
+<button onclick="toggleMusic()">Music On/Off</button>
+</div>
 </div>
 
 <div id="chat">
-  <div id="messages"></div>
-  <input id="input" placeholder="Say something..." onkeydown="if(event.key==='Enter'){sendMessage()}">
+<div id="messages"></div>
+<input id="input" placeholder="Say something..." onkeydown="if(event.key==='Enter'){sendMessage()}">
+</div>
+
+<div id="mobileControls" style="display:none;">
+<button class="mobileBtn" onclick="keys['ArrowLeft']=true" ontouchstart="keys['ArrowLeft']=true" ontouchend="keys['ArrowLeft']=false">◀</button>
+<button class="mobileBtn" onclick="keys[' ']=true" ontouchstart="keys[' ']=true" ontouchend="keys[' ']=false">▲</button>
+<button class="mobileBtn" onclick="keys['ArrowRight']=true" ontouchstart="keys['ArrowRight']=true" ontouchend="keys['ArrowRight']=false">▶</button>
 </div>
 
 <audio id="music" src="winds-of-fjords.mp3" loop></audio>
 <canvas id="game" width="800" height="500"></canvas>
 
 <script>
-// --- Mobile detection ---
+// --- Mobile Detection ---
 const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-if(isMobile){ alert("Mobile controls enabled"); }
+if(isMobile){document.getElementById('mobileControls').style.display='flex';}
 
-// --- Music toggle ---
-const music = document.getElementById('music');
-function toggle
+// --- Music Toggle ---
+const music=document.getElementById('music');
+function toggleMusic(){music.paused?music.play():music.pause();}
+
+// --- Login System ---
+let users=JSON.parse(localStorage.getItem('eedUsers'))||{};
+let currentUser=null;
+function login(){const u=document.getElementById('username').value; const p=document.getElementById('password').value;
+if(users[u]&&users[u]===p){currentUser=u; showMenu();}else alert("Wrong login");}
+function signup(){const u=document.getElementById('username').value; const p=document.getElementById('password').value;
+if(u&&p){users[u]=p; localStorage.setItem('eedUsers',JSON.stringify(users)); alert("Signed up!");}}
+function showMenu(){document.getElementById('login').style.display='none';document.getElementById('menu').style.display='flex';}
+
+// --- Multiplayer WebSocket ---
+const socket=new WebSocket('ws://YOUR_SERVER_IP:8080');
+let players={};
+socket.onopen=()=>{if(currentUser) socket.send(JSON.stringify({type:'join',user:currentUser}));}
+socket.onmessage=e=>{const data=JSON.parse(e.data);
+if(data.type==='update') players=data.players;
+if(data.type==='chat'){const d=document.createElement('div');d.innerText=data.user+': '+data.message;
+document.getElementById('messages').appendChild(d);document.getElementById('messages').scrollTop=document.getElementById('messages').scrollHeight;}};
+function sendMessage(){const msg=document.getElementById('input').value;
+if(msg){socket.send(JSON.stringify({type:'chat',user:currentUser,message:msg}));document.getElementById('input').value='';}}
+
+// --- Game System ---
+const canvas=document.getElementById('game'); const ctx=canvas.getContext('2d');
+let gameMode=null;
+let player={x:50,y:350,vx:0,vy:0,onGround:false};
+const keys={};
+
+document.addEventListener('keydown',e=>keys[e.key]=true);
+document.addEventListener('keyup',e=>keys[e.key]=false);
+
+let tycoonData={money:0,level:1,income:1,upgradeCost:10};
+
+function startGame(mode){gameMode=mode; player.x=50; player.y=350;}
+
+// --- Game Loop ---
+function update(){
+ctx.clearRect(0,0,canvas.width,canvas.height);
+
+if(gameMode==='obby'){
+  player.vy+=0.5;
+  if(keys['ArrowLeft']) player.vx=-3;
+  if(keys['ArrowRight']) player.vx=3;
+  if(keys[' '] && player.onGround){player.vy=-10;player.onGround=false;}
+  player.x+=player.vx; player.y+=player.vy;
+  if(player.y>450){player.y=450;player.vy=0;player.onGround=true;}
+  player.vx*=0.9;
+  if(currentUser) socket.send(JSON.stringify({type:'move',user:currentUser,x:player.x,y:player.y}));
+  // Draw players
+  for(let p in players){
+    ctx.fillStyle = p===currentUser?'cyan':'magenta';
+    ctx.fillRect(players[p].x,players[p].y,30,30);
+  }
+}
+
+if(gameMode==='tycoon'){
+  ctx.fillStyle='#222'; ctx.fillRect(50,50,300,200);
+  ctx.fillStyle='white'; ctx.font='20px Courier New';
+  ctx.fillText('Money: $'+tycoonData.money,60,80);
+  ctx.fillText('Level: '+tycoonData.level,60,110);
+  ctx.fillText('Income: $'+tycoonData.income,60,140);
+  ctx.fillText('Upgrade Cost: $'+tycoonData.upgradeCost,60,170);
+
+  ctx.fillStyle='green'; ctx.fillRect(400,60,100,40);
+  ctx.fillStyle='white'; ctx.fillText('Collect',410,90);
+
+  ctx.fillStyle='orange'; ctx.fillRect(400,120,100,40);
+  ctx.fillStyle='white'; ctx.fillText('Upgrade',410,150);
+}
+
+requestAnimationFrame(update);
+}
+
+// --- Tycoon Button Clicks ---
+canvas.addEventListener('click',function(e){
+if(gameMode==='tycoon'){
+  const x=e.offsetX, y=e.offsetY;
+  if(x>=400 && x<=500 && y>=60 && y<=100){tycoonData.money+=tycoonData.income;}
+  if(x>=400 && x<=500 && y>=120 && y<=160 && tycoonData.money>=tycoonData.upgradeCost){
+    tycoonData.money-=tycoonData.upgradeCost;
+    tycoonData.level+=1;
+    tycoonData.income+=1;
+    tycoonData.upgradeCost=Math.floor(tycoonData.upgradeCost*1.5);
+  }
+}
+});
+update();
+</script>
+
+</body>
+</html>
