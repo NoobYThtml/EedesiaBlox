@@ -2,38 +2,26 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>EedesiaBlox Hub</title>
+<title>EedesiaBlox</title>
 <style>
-body { margin:0; overflow:hidden; font-family:'Courier New', monospace; background:linear-gradient(135deg, red, yellow, orange, green); color:white; }
-canvas { display:block; background:#c0c0c0; }
-button {
-  padding:6px 12px; cursor:pointer; font-family:'Courier New', monospace; font-size:14px;
-  border:2px solid white; border-radius:4px;
-  background:linear-gradient(#333,#111);
-  color:white;
-  box-shadow:2px 2px 0 #555, 4px 4px 0 #777;
-}
-.panel {
-  position:absolute; background:rgba(0,0,0,0.6); border:2px solid white; border-radius:6px;
-  padding:6px; box-shadow:4px 4px 0 #555;
-  font-family:'Courier New', monospace;
-}
-#musicToggle { top:10px; left:10px; }
-#hubBtn { top:60px; left:10px; }
-#obbyBtn { top:100px; left:10px; }
-#tycoonBtn { top:140px; left:10px; }
-#jumpBtn { bottom:80px; left:50px; }
-#leftBtn { bottom:20px; left:10px; }
-#rightBtn { bottom:20px; left:100px; }
-#chatBox { bottom:0; right:0; width:280px; height:180px; overflow-y:auto; }
-#chatInput { bottom:0; right:0; width:220px; }
-#chatSend { bottom:0; right:0; width:50px; }
-#leaderboard { top:10px; right:10px; width:200px; height:150px; }
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+body{margin:0;overflow:hidden;font-family:'Press Start 2P',monospace;background:linear-gradient(135deg,red,yellow,orange,green);color:white}
+canvas{display:block;background:#c0c0c0}
+button{padding:6px 12px;cursor:pointer;font-family:'Press Start 2P',monospace;font-size:12px;border:2px solid white;border-radius:4px;background:linear-gradient(#333,#111);color:white;box-shadow:2px 2px 0 #555,4px 4px 0 #777;transition:all 0.1s ease}
+button:hover{background:linear-gradient(#555,#222);transform:translate(-2px,-2px);box-shadow:4px 4px 0 #555,6px 6px 0 #777}
+button:active{transform:translate(0,0);box-shadow:1px 1px 0 #555,2px 2px 0 #777}
+.panel{position:absolute;background:rgba(0,0,0,0.6);border:2px solid white;border-radius:6px;padding:6px;box-shadow:4px 4px 0 #555;font-family:'Press Start 2P',monospace;transition:all 0.1s ease}
+.panel:hover{background:rgba(50,50,50,0.8);transform:translate(-2px,-2px);box-shadow:6px 6px 0 #555}
+.panel:active{transform:translate(0,0);box-shadow:2px 2px 0 #555}
+/* UI positions */
+#musicToggle{top:10px;left:10px}#hubBtn{top:60px;left:10px}#obbyBtn{top:100px;left:10px}#tycoonBtn{top:140px;left:10px}
+#jumpBtn{bottom:80px;left:50px}#leftBtn{bottom:20px;left:10px}#rightBtn{bottom:20px;left:100px}
+#chatBox{bottom:0;right:0;width:280px;height:180px;overflow-y:auto}#chatInput{bottom:0;right:0;width:220px}#chatSend{bottom:0;right:0;width:50px}
+#leaderboard{top:10px;right:10px;width:200px;height:150px}
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
-
 <button id="musicToggle">Music On</button>
 <button id="hubBtn">Hub</button>
 <button id="obbyBtn">Obby</button>
@@ -41,35 +29,28 @@ button {
 <button id="jumpBtn">Jump</button>
 <button id="leftBtn">Left</button>
 <button id="rightBtn">Right</button>
-
 <div id="chatBox" class="panel"></div>
-<input type="text" id="chatInput" class="panel" placeholder="Type..." />
+<input type="text" id="chatInput" class="panel" placeholder="Type..."/>
 <button id="chatSend" class="panel">Send</button>
 <div id="leaderboard" class="panel">Leaderboard:</div>
-
 <script>
-const canvas=document.getElementById('game');
-const ctx=canvas.getContext('2d');
-canvas.width=window.innerWidth; canvas.height=window.innerHeight;
-
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+canvas.width=window.innerWidth;canvas.height=window.innerHeight;
 // Music
-let music=new Audio('winds_of_fjords.mp3'); music.loop=true; music.play();
+let music=new Audio('winds_of_fjords.mp3');music.loop=true;music.play();
 let musicPlaying=true;
 document.getElementById('musicToggle').onclick=()=>{musicPlaying=!musicPlaying;musicPlaying?music.play():music.pause();};
-
 // Mode
 let mode='hub';
 document.getElementById('hubBtn').onclick=()=>{mode='hub';};
 document.getElementById('obbyBtn').onclick=()=>{mode='obby';};
 document.getElementById('tycoonBtn').onclick=()=>{mode='tycoon';};
-
 // Player & physics
-let gravity=0.7, jumpPower=-12;
+let gravity=0.7,jumpPower=-12;
 let player={x:50,y:200,vx:0,vy:0,w:30,h:50,onGround:false};
 let obstacles=[{x:200,y:400,w:100,h:20},{x:400,y:300,w:100,h:20}];
 let money=0;
 let tycoonBoxes=[{x:300,y:300,w:50,h:50,owned:false,level:0}];
-
 // Controls
 let keys={};
 document.getElementById('jumpBtn').onclick=()=>{if(player.onGround)player.vy=jumpPower;}
@@ -77,86 +58,51 @@ document.getElementById('leftBtn').onclick=()=>{player.vx=-5;}
 document.getElementById('rightBtn').onclick=()=>{player.vx=5;}
 window.addEventListener('keydown',e=>keys[e.key]=true);
 window.addEventListener('keyup',e=>keys[e.key]=false);
-
 // Chat
 const chatBox=document.getElementById('chatBox');
 const chatInput=document.getElementById('chatInput');
 document.getElementById('chatSend').onclick=sendMessage;
-chatInput.addEventListener('keydown',e=>{if(e.key==='Enter') sendMessage();});
-function sendMessage(){
-  const msg=chatInput.value.trim();
-  if(msg==='')return;
-  chatBox.innerHTML+='<div>You: '+msg+'</div>'; chatBox.scrollTop=chatBox.scrollHeight;
-  chatInput.value='';
-}
-
+chatInput.addEventListener('keydown',e=>{if(e.key==='Enter')sendMessage();});
+function sendMessage(){const msg=chatInput.value.trim();if(msg==='')return;chatBox.innerHTML+='<div>You: '+msg+'</div>';chatBox.scrollTop=chatBox.scrollHeight;chatInput.value='';}
 // Leaderboard
 const leaderboard=document.getElementById('leaderboard');
-function updateLeaderboard(){
-  leaderboard.innerHTML='Leaderboard:<br>';
-  leaderboard.innerHTML+='Player: '+Math.floor(money)+'$<br>';
-}
-
+function updateLeaderboard(){leaderboard.innerHTML='Leaderboard:<br>';leaderboard.innerHTML+='Player: '+Math.floor(money)+'$<br>';}
 // Update function
 function update(){
   if(mode==='obby'){
-    if(keys['ArrowLeft']) player.vx=-5; else if(keys['ArrowRight']) player.vx=5; else player.vx=0;
-    if(keys['ArrowUp'] && player.onGround) player.vy=jumpPower;
-    player.vy+=gravity;
-    player.x+=player.vx; player.y+=player.vy;
-    player.onGround=false;
+    if(keys['ArrowLeft'])player.vx=-5;else if(keys['ArrowRight'])player.vx=5;else player.vx=0;
+    if(keys['ArrowUp']&&player.onGround)player.vy=jumpPower;
+    player.vy+=gravity;player.x+=player.vx;player.y+=player.vy;player.onGround=false;
     obstacles.forEach(o=>{
-      if(player.x<o.x+o.w && player.x+player.w>o.x && player.y<o.y+o.h && player.y+player.h>o.y){
-        player.y=o.y-player.h;
-        player.vy=0;
-        player.onGround=true;
+      if(player.x<o.x+o.w&&player.x+player.w>o.x&&player.y<o.y+o.h&&player.y+player.h>o.y){
+        player.y=o.y-player.h;player.vy=0;player.onGround=true;
       }
     });
-  } else if(mode==='tycoon'){
+  }else if(mode==='tycoon'){
     money+=0.1;
     canvas.onclick=e=>{
       const rect=canvas.getBoundingClientRect();
-      const mx=e.clientX-rect.left;
-      const my=e.clientY-rect.top;
+      const mx=e.clientX-rect.left,my=e.clientY-rect.top;
       tycoonBoxes.forEach(b=>{
-        if(mx>b.x && mx<b.x+b.w && my>b.y && my<b.y+b.h){
-          if(!b.owned && money>=50){b.owned=true;b.level=1;money-=50;}
-          else if(b.owned && money>=100){b.level++;money-=100;}
+        if(mx>b.x&&mx<b.x+b.w&&my>b.y&&my<b.y+b.h){
+          if(!b.owned&&money>=50){b.owned=true;b.level=1;money-=50;}
+          else if(b.owned&&money>=100){b.level++;money-=100;}
         }
       });
     };
   }
   updateLeaderboard();
 }
-
 // Draw function
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  if(mode==='hub'){
-    ctx.fillStyle='black';
-    ctx.font='50px Courier New';
-    ctx.fillText('Welcome to EedesiaBlox Hub',50,100);
-  } else if(mode==='obby'){
-    ctx.fillStyle='brown'; obstacles.forEach(o=>ctx.fillRect(o.x,o.y,o.w,o.h));
-    ctx.fillStyle='blue'; ctx.fillRect(player.x,player.y,player.w,player.h);
-  } else if(mode==='tycoon'){
-    ctx.fillStyle='green';
-    ctx.font='40px Courier New';
-    ctx.fillText('Money: '+Math.floor(money),50,100);
-    tycoonBoxes.forEach(b=>{
-      ctx.fillStyle=b.owned?'orange':'gray';
-      ctx.fillRect(b.x,b.y,b.w,b.h);
-      if(b.owned){
-        ctx.fillStyle='white';
-        ctx.fillText('Lvl '+b.level,b.x,b.y-5);
-      }
-    });
-  }
+  if(mode==='hub'){ctx.fillStyle='black';ctx.font='50px Press Start 2P';ctx.fillText('Welcome to EedesiaBlox Hub',50,100);}
+  else if(mode==='obby'){ctx.fillStyle='brown';obstacles.forEach(o=>ctx.fillRect(o.x,o.y,o.w,o.h));ctx.fillStyle='blue';ctx.fillRect(player.x,player.y,player.w,player.h);}
+  else if(mode==='tycoon'){ctx.fillStyle='green';ctx.font='40px Press Start 2P';ctx.fillText('Money: '+Math.floor(money),50,100);tycoonBoxes.forEach(b=>{ctx.fillStyle=b.owned?'orange':'gray';ctx.fillRect(b.x,b.y,b.w,b.h);if(b.owned){ctx.fillStyle='white';ctx.fillText('Lvl '+b.level,b.x,b.y-5);}});}
 }
-
 // Game loop
 function loop(){update();draw();requestAnimationFrame(loop);}
 loop();
 </script>
 </body>
-  </html>
+</html>
