@@ -3,22 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Eedesia Hub</title>
+<title>Eedesia Blox</title>
 <style>
-body {margin:0; font-family:Arial,sans-serif; background:linear-gradient(135deg, red, green, orange, yellow); color:white; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh;}
-h1,h2 {text-shadow:2px 2px 5px black;}
-.buttons {display:flex; flex-wrap:wrap; gap:20px; justify-content:center;}
-.button {padding:20px 40px; border-radius:12px; cursor:pointer; font-weight:bold; text-align:center; box-shadow:2px 2px 5px black; transition: transform 0.2s; user-select:none;}
-.button:hover {transform:scale(1.1);}
-.red{background:red;} .green{background:green;} .orange{background:orange;} .yellow{background:yellow;}
+body {margin:0; font-family:monospace; background:#87CEEB; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; min-height:100vh; color:black;}
+h1,h2 {font-family:monospace; margin:10px;}
+.buttons {display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:20px;}
+.button {padding:10px 20px; cursor:pointer; font-weight:bold; text-align:center; background:white; border:2px solid black; user-select:none;}
+.button.red{background:red;} .green{background:green;} .orange{background:orange;} .yellow{background:yellow;}
 #obby {display:none; text-align:center; margin-top:20px;}
-#gameCanvas {border:2px solid black; background:#ccc; display:block; margin:20px auto;}
-#message {margin-top:10px; font-weight:bold; color:white; text-shadow:1px 1px 2px black;}
-.mobileControls {display:flex; gap:20px; justify-content:center; margin-top:10px;}
+#gameCanvas {border:2px solid black; background:#87CEEB; display:block; margin:20px auto;}
+#message {margin-top:10px; font-weight:bold;}
+.mobileControls {display:flex; gap:10px; justify-content:center; margin-top:10px;}
 </style>
 </head>
 <body>
-<h1>Eedesia Hub</h1>
+<h1>Eedesia Blox Hub</h1>
 <div class="buttons" id="menu">
   <div class="button red" onclick="showObby()">Obby</div>
   <div class="button green" onclick="alert('Tycoon coming soon!')">Tycoon</div>
@@ -28,14 +27,14 @@ h1,h2 {text-shadow:2px 2px 5px black;}
 </div>
 
 <div id="obby">
-  <h2>Welcome to the Eedesia Obby!</h2>
-  <canvas id="gameCanvas" width="500" height="200"></canvas>
+  <h2>Welcome to Eedesia Obby!</h2>
+  <canvas id="gameCanvas" width="500" height="300"></canvas>
   <div id="message"></div>
   <div class="mobileControls">
     <button onclick="jump()">Jump</button>
     <button onclick="dodge()">Dodge</button>
   </div>
-  <div style="margin-top:20px;">
+  <div style="margin-top:10px;">
     <button onclick="backToHub()">Back to Hub</button>
   </div>
 </div>
@@ -44,9 +43,9 @@ h1,h2 {text-shadow:2px 2px 5px black;}
 // Mobile detection
 if(/Mobi|Android/i.test(navigator.userAgent)){
   let note=document.createElement('p');
-  note.textContent="You are on mobile! Use the on-screen buttons.";
-  note.style.fontSize="1.2em"; note.style.marginTop="20px";
-  document.body.insertBefore(note, document.querySelector('.buttons'));
+  note.textContent="Mobile detected! Use the on-screen buttons.";
+  note.style.fontSize="1.1em"; note.style.marginTop="20px";
+  document.body.insertBefore(note, document.getElementById('menu'));
 }
 
 // Music toggle
@@ -61,58 +60,68 @@ function toggleMusic(){
 function showObby(){document.getElementById('menu').style.display='none'; document.getElementById('obby').style.display='block'; startGame();}
 function backToHub(){document.getElementById('obby').style.display='none'; document.getElementById('menu').style.display='flex';}
 
-// Obby logic
-let canvas, ctx, player, gravity=0.5, obstacles=[], finishX=450, messageTimeout;
+// Platformer logic (Old Roblox style)
+let canvas, ctx, player, gravity=0.6, obstacles=[], finishX=450, messageTimeout;
 function startGame(){
   canvas=document.getElementById('gameCanvas'); ctx=canvas.getContext('2d');
-  player={x:50,y:150,w:20,h:20,vy:0};
-  obstacles=[{x:200,w:20,h:40},{x:320,w:20,h:50},{x:400,w:20,h:30}];
+  player={x:50,y:200,w:20,h:20,vy:0};
+  obstacles=[
+    {x:100,y:250,w:50,h:20},
+    {x:200,y:220,w:60,h:20},
+    {x:300,y:180,w:50,h:20},
+    {x:400,y:240,w:50,h:20}
+  ];
   document.getElementById('message').textContent="";
   requestAnimationFrame(updateGame);
 }
+
 function updateGame(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle='green'; ctx.fillRect(0,180,canvas.width,20);
   
-  // player
-  player.vy+=gravity; player.y+=player.vy;
-  if(player.y>160){player.y=160; player.vy=0;}
-  ctx.fillStyle='red'; ctx.fillRect(player.x,player.y,player.w,player.h);
-  
-  // obstacles
-  ctx.fillStyle='black';
+  // draw platforms
+  ctx.fillStyle='brown';
   for(let obs of obstacles){
-    ctx.fillRect(obs.x,180-obs.h,obs.w,obs.h);
-    if(player.x < obs.x+obs.w && player.x+player.w > obs.x && player.y+player.h > 180-obs.h){
-      showMessage('You hit an obstacle! Restarting...');
-      startGame();
-      return;
+    ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+  }
+
+  // draw player
+  player.vy += gravity; player.y += player.vy;
+
+  // collision
+  let onGround=false;
+  for(let obs of obstacles){
+    if(player.x + player.w > obs.x && player.x < obs.x + obs.w && player.y + player.h > obs.y && player.y + player.h < obs.y + player.vy+obs.h){
+      player.y = obs.y - player.h;
+      player.vy = 0;
+      onGround = true;
     }
   }
-  
+
+  // ground collision
+  if(player.y + player.h > 270){player.y=270-player.h; player.vy=0; onGround=true;}
+
+  // draw player
+  ctx.fillStyle='red'; ctx.fillRect(player.x, player.y, player.w, player.h);
+
+  // move forward gradually
+  player.x += 2;
+
   // finish line
-  ctx.fillStyle='gold';
-  ctx.fillRect(finishX,160,10,20);
-  if(player.x+player.w >= finishX){
-    showMessage('You finished the Obby! Congrats!');
-    setTimeout(backToHub, 1000);
-    return;
-  }
-  
-  // move player forward
-  player.x+=2;
+  ctx.fillStyle='gold'; ctx.fillRect(finishX,250,10,20);
+  if(player.x + player.w >= finishX){ showMessage('You finished the Obby!'); setTimeout(backToHub,1000); return;}
+
+  // falling off
+  if(player.y > 300){ showMessage('You fell! Restarting...'); startGame(); return; }
+
   requestAnimationFrame(updateGame);
 }
 
-function jump(){ if(player.y>=160) player.vy=-10; }
-function dodge(){
-  // dodge moves player slightly forward to skip small obstacles
-  player.x+=20;
-  showMessage('You dodged!');
-}
+// Controls
+function jump(){ if(player.vy===0) player.vy=-10; }
+function dodge(){ player.x+=20; showMessage('You dodged!'); }
 
 function showMessage(msg){
-  const m = document.getElementById('message');
+  const m=document.getElementById('message');
   m.textContent=msg;
   clearTimeout(messageTimeout);
   messageTimeout=setTimeout(()=>{m.textContent='';},1000);
