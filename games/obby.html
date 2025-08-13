@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mega Rainbow Obby</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { background: #87ceeb; display: block; }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let player = { x: 50, y: canvas.height - 60, w: 40, h: 40, color: "red", dy: 0, onGround: false };
+    let gravity = 0.8;
+    let jumpPower = -15;
+    let keys = {};
+
+    let platforms = [];
+    for (let i = 0; i < 10; i++) {
+      platforms.push({
+        x: i * 200,
+        y: canvas.height - 100 - (i % 2) * 100,
+        w: 150,
+        h: 20,
+        color: `hsl(${i * 36}, 100%, 50%)`
+      });
+    }
+
+    function drawPlayer() {
+      ctx.fillStyle = player.color;
+      ctx.fillRect(player.x, player.y, player.w, player.h);
+    }
+
+    function drawPlatforms() {
+      platforms.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.w, p.h);
+      });
+    }
+
+    function update() {
+      player.dy += gravity;
+      player.y += player.dy;
+
+      if (player.y + player.h > canvas.height) {
+        player.y = canvas.height - player.h;
+        player.dy = 0;
+        player.onGround = true;
+      }
+
+      platforms.forEach(p => {
+        if (player.x < p.x + p.w &&
+            player.x + player.w > p.x &&
+            player.y + player.h <= p.y + 10 &&
+            player.y + player.h + player.dy >= p.y) {
+          player.y = p.y - player.h;
+          player.dy = 0;
+          player.onGround = true;
+        }
+      });
+
+      if (keys["ArrowRight"] || keys["d"]) player.x += 5;
+      if (keys["ArrowLeft"] || keys["a"]) player.x -= 5;
+    }
+
+    function jump() {
+      if (player.onGround) {
+        player.dy = jumpPower;
+        player.onGround = false;
+      }
+    }
+
+    function loop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawPlatforms();
+      drawPlayer();
+      update();
+      requestAnimationFrame(loop);
+    }
+
+    window.addEventListener("keydown", e => {
+      keys[e.key] = true;
+      if (e.key === " " || e.key === "ArrowUp" || e.key === "w") jump();
+    });
+    window.addEventListener("keyup", e => keys[e.key] = false);
+
+    loop();
+  </script>
+</body>
+</html>
