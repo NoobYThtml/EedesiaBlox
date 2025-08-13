@@ -11,8 +11,10 @@ h1,h2 {text-shadow:2px 2px 5px black;}
 .button {padding:20px 40px; border-radius:12px; cursor:pointer; font-weight:bold; text-align:center; box-shadow:2px 2px 5px black; transition: transform 0.2s; user-select:none;}
 .button:hover {transform:scale(1.1);}
 .red{background:red;} .green{background:green;} .orange{background:orange;} .yellow{background:yellow;}
-#obby {display:none; text-align:center; margin-top:50px;}
+#obby {display:none; text-align:center; margin-top:20px;}
 #gameCanvas {border:2px solid black; background:#ccc; display:block; margin:20px auto;}
+#message {margin-top:10px; font-weight:bold; color:white; text-shadow:1px 1px 2px black;}
+.mobileControls {display:flex; gap:20px; justify-content:center; margin-top:10px;}
 </style>
 </head>
 <body>
@@ -28,8 +30,10 @@ h1,h2 {text-shadow:2px 2px 5px black;}
 <div id="obby">
   <h2>Welcome to the Eedesia Obby!</h2>
   <canvas id="gameCanvas" width="500" height="200"></canvas>
-  <div>
+  <div id="message"></div>
+  <div class="mobileControls">
     <button onclick="jump()">Jump</button>
+    <button onclick="dodge()">Dodge</button>
   </div>
   <div style="margin-top:20px;">
     <button onclick="backToHub()">Back to Hub</button>
@@ -40,15 +44,14 @@ h1,h2 {text-shadow:2px 2px 5px black;}
 // Mobile detection
 if(/Mobi|Android/i.test(navigator.userAgent)){
   let note=document.createElement('p');
-  note.textContent="You are on mobile! Buttons are optimized for touch.";
+  note.textContent="You are on mobile! Use the on-screen buttons.";
   note.style.fontSize="1.2em"; note.style.marginTop="20px";
   document.body.insertBefore(note, document.querySelector('.buttons'));
 }
 
 // Music toggle
 let audio = new Audio('winds-of-fjords.mp3'); 
-audio.loop = true;
-let musicOn = false;
+audio.loop = true; let musicOn = false;
 function toggleMusic(){
   if(musicOn){ audio.pause(); musicOn=false; document.getElementById('musicBtn').textContent="Music: Off"; }
   else { audio.play(); musicOn=true; document.getElementById('musicBtn').textContent="Music: On"; }
@@ -59,11 +62,12 @@ function showObby(){document.getElementById('menu').style.display='none'; docume
 function backToHub(){document.getElementById('obby').style.display='none'; document.getElementById('menu').style.display='flex';}
 
 // Obby logic
-let canvas, ctx, player, gravity=0.5, obstacles=[], finishX=450;
+let canvas, ctx, player, gravity=0.5, obstacles=[], finishX=450, messageTimeout;
 function startGame(){
   canvas=document.getElementById('gameCanvas'); ctx=canvas.getContext('2d');
   player={x:50,y:150,w:20,h:20,vy:0};
-  obstacles=[{x:200,w:20,h:40},{x:320,w:20,h:50}];
+  obstacles=[{x:200,w:20,h:40},{x:320,w:20,h:50},{x:400,w:20,h:30}];
+  document.getElementById('message').textContent="";
   requestAnimationFrame(updateGame);
 }
 function updateGame(){
@@ -79,9 +83,8 @@ function updateGame(){
   ctx.fillStyle='black';
   for(let obs of obstacles){
     ctx.fillRect(obs.x,180-obs.h,obs.w,obs.h);
-    // collision
     if(player.x < obs.x+obs.w && player.x+player.w > obs.x && player.y+player.h > 180-obs.h){
-      alert('You hit an obstacle! Restarting...');
+      showMessage('You hit an obstacle! Restarting...');
       startGame();
       return;
     }
@@ -91,16 +94,29 @@ function updateGame(){
   ctx.fillStyle='gold';
   ctx.fillRect(finishX,160,10,20);
   if(player.x+player.w >= finishX){
-    alert('You finished the Obby! Congrats!');
-    backToHub();
+    showMessage('You finished the Obby! Congrats!');
+    setTimeout(backToHub, 1000);
     return;
   }
   
-  // move player forward slowly
+  // move player forward
   player.x+=2;
   requestAnimationFrame(updateGame);
 }
+
 function jump(){ if(player.y>=160) player.vy=-10; }
+function dodge(){
+  // dodge moves player slightly forward to skip small obstacles
+  player.x+=20;
+  showMessage('You dodged!');
+}
+
+function showMessage(msg){
+  const m = document.getElementById('message');
+  m.textContent=msg;
+  clearTimeout(messageTimeout);
+  messageTimeout=setTimeout(()=>{m.textContent='';},1000);
+}
 </script>
 </body>
 </html>
