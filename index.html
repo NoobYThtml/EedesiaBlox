@@ -5,145 +5,115 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Eedesiablox</title>
 <style>
-body{margin:0;padding:0;font-family:'Courier New',monospace;
-background:linear-gradient(135deg,red,orange,yellow,green);color:white;overflow:hidden;}
-#ui{position:absolute;top:10px;left:10px;display:flex;flex-direction:column;gap:10px;z-index:100;}
-button,input{font-family:'Courier New',monospace;font-size:16px;padding:6px;background:#222;border:2px solid #fff;color:white;cursor:pointer;}
-input{background:#333;}
-#chat{position:absolute;bottom:10px;left:10px;width:220px;max-height:150px;overflow-y:auto;background:#222;padding:5px;border:2px solid white;font-size:14px;}
-#messages{max-height:120px;overflow-y:auto;}
-canvas{display:block;margin:0 auto;background:black;touch-action:none;border:4px solid white;}
-#mobileControls{position:absolute;bottom:0;left:50%;transform:translateX(-50%);display:flex;gap:20px;z-index:100;}
-.mobileBtn{padding:15px;background:#222;border:2px solid white;color:white;font-size:20px;}
-button:hover,input:focus{outline:none;border-color:yellow;}
+body, html{margin:0;padding:0;height:100%;overflow:hidden;font-family:Verdana, sans-serif;}
+body{background:linear-gradient(135deg, red, orange, yellow, green);}
+#ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
+button, input{pointer-events:auto;padding:5px;margin:3px;font-size:14px;}
+#menu,#login,#chat,#games,#musicbtn{position:absolute;background:#ccc;border:2px solid #000;border-radius:4px;padding:5px;}
+#menu{top:10px;left:10px;}#login{top:10px;right:10px;}#games{bottom:10px;left:10px;}#chat{bottom:10px;right:10px;width:200px;height:150px;overflow:auto;}
+canvas{display:block;}
 </style>
 </head>
 <body>
-
+<canvas id="game"></canvas>
 <div id="ui">
+<div id="menu">
+<h3>Eedesiablox</h3>
+<button onclick="showObby()">Obby</button>
+<button onclick="showTycoon()">Tycoon</button>
+<button id="musicbtn" onclick="toggleMusic()">Music On/Off</button>
+</div>
 <div id="login">
-<input id="username" placeholder="Username">
-<input id="password" type="password" placeholder="Password">
+<input id="user" placeholder="Username"><br>
+<input id="pass" type="password" placeholder="Password"><br>
 <button onclick="login()">Login</button>
 <button onclick="signup()">Sign Up</button>
 </div>
-
-<div id="menu" style="display:none;">
-<button onclick="startGame('obby')">Obby</button>
-<button onclick="startGame('tycoon')">Tycoon</button>
-<button onclick="toggleMusic()">Music On/Off</button>
+<div id="chat"></div>
+<div id="games"></div>
 </div>
-</div>
-
-<div id="chat">
-<div id="messages"></div>
-<input id="input" placeholder="Say something..." onkeydown="if(event.key==='Enter'){sendMessage()}">
-</div>
-
-<div id="mobileControls" style="display:none;">
-<button class="mobileBtn" onclick="keys['ArrowLeft']=true" ontouchstart="keys['ArrowLeft']=true" ontouchend="keys['ArrowLeft']=false">◀</button>
-<button class="mobileBtn" onclick="keys[' ']=true" ontouchstart="keys[' ']=true" ontouchend="keys[' ']=false">▲</button>
-<button class="mobileBtn" onclick="keys['ArrowRight']=true" ontouchstart="keys['ArrowRight']=true" ontouchend="keys['ArrowRight']=false">▶</button>
-</div>
-
-<audio id="music" src="winds-of-fjords.mp3" loop></audio>
-<canvas id="game" width="800" height="500"></canvas>
-
+<audio id="music" loop>
+<source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_5d1ee0f6c5.mp3?filename=calm-synthwave-11089.mp3" type="audio/mpeg">
+</audio>
 <script>
-// --- Mobile Detection ---
-const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-if(isMobile){document.getElementById('mobileControls').style.display='flex';}
+// Music toggle
+const music=document.getElementById("music");
+let musicOn=false;
+function toggleMusic(){musicOn=!musicOn;if(musicOn){music.play();}else{music.pause();}}
 
-// --- Music Toggle ---
-const music=document.getElementById('music');
-function toggleMusic(){music.paused?music.play():music.pause();}
-
-// --- Login System ---
-let users=JSON.parse(localStorage.getItem('eedUsers'))||{};
-let currentUser=null;
-function login(){const u=document.getElementById('username').value; const p=document.getElementById('password').value;
-if(users[u]&&users[u]===p){currentUser=u; showMenu();}else alert("Wrong login");}
-function signup(){const u=document.getElementById('username').value; const p=document.getElementById('password').value;
-if(u&&p){users[u]=p; localStorage.setItem('eedUsers',JSON.stringify(users)); alert("Signed up!");}}
-function showMenu(){document.getElementById('login').style.display='none';document.getElementById('menu').style.display='flex';}
-
-// --- Multiplayer WebSocket ---
-const socket=new WebSocket('ws://YOUR_SERVER_IP:8080');
-let players={};
-socket.onopen=()=>{if(currentUser) socket.send(JSON.stringify({type:'join',user:currentUser}));}
-socket.onmessage=e=>{const data=JSON.parse(e.data);
-if(data.type==='update') players=data.players;
-if(data.type==='chat'){const d=document.createElement('div');d.innerText=data.user+': '+data.message;
-document.getElementById('messages').appendChild(d);document.getElementById('messages').scrollTop=document.getElementById('messages').scrollHeight;}};
-function sendMessage(){const msg=document.getElementById('input').value;
-if(msg){socket.send(JSON.stringify({type:'chat',user:currentUser,message:msg}));document.getElementById('input').value='';}}
-
-// --- Game System ---
-const canvas=document.getElementById('game'); const ctx=canvas.getContext('2d');
-let gameMode=null;
-let player={x:50,y:350,vx:0,vy:0,onGround:false};
-const keys={};
-
-document.addEventListener('keydown',e=>keys[e.key]=true);
-document.addEventListener('keyup',e=>keys[e.key]=false);
-
-let tycoonData={money:0,level:1,income:1,upgradeCost:10};
-
-function startGame(mode){gameMode=mode; player.x=50; player.y=350;}
-
-// --- Game Loop ---
-function update(){
-ctx.clearRect(0,0,canvas.width,canvas.height);
-
-if(gameMode==='obby'){
-  player.vy+=0.5;
-  if(keys['ArrowLeft']) player.vx=-3;
-  if(keys['ArrowRight']) player.vx=3;
-  if(keys[' '] && player.onGround){player.vy=-10;player.onGround=false;}
-  player.x+=player.vx; player.y+=player.vy;
-  if(player.y>450){player.y=450;player.vy=0;player.onGround=true;}
-  player.vx*=0.9;
-  if(currentUser) socket.send(JSON.stringify({type:'move',user:currentUser,x:player.x,y:player.y}));
-  // Draw players
-  for(let p in players){
-    ctx.fillStyle = p===currentUser?'cyan':'magenta';
-    ctx.fillRect(players[p].x,players[p].y,30,30);
-  }
+// Login system (localStorage)
+function signup(){
+  const u=document.getElementById("user").value;
+  const p=document.getElementById("pass").value;
+  if(u&&p){localStorage.setItem(u,p);alert("Signed Up!");}
+}
+function login(){
+  const u=document.getElementById("user").value;
+  const p=document.getElementById("pass").value;
+  if(localStorage.getItem(u)===p){alert("Logged In!");}else{alert("Wrong credentials");}
 }
 
-if(gameMode==='tycoon'){
-  ctx.fillStyle='#222'; ctx.fillRect(50,50,300,200);
-  ctx.fillStyle='white'; ctx.font='20px Courier New';
-  ctx.fillText('Money: $'+tycoonData.money,60,80);
-  ctx.fillText('Level: '+tycoonData.level,60,110);
-  ctx.fillText('Income: $'+tycoonData.income,60,140);
-  ctx.fillText('Upgrade Cost: $'+tycoonData.upgradeCost,60,170);
+// Chat (local only)
+const chat=document.getElementById("chat");
+function addChat(msg){const d=document.createElement("div");d.textContent=msg;chat.appendChild(d);chat.scrollTop=chat.scrollHeight;}
+addChat("Welcome to Eedesiablox chat!");
 
-  ctx.fillStyle='green'; ctx.fillRect(400,60,100,40);
-  ctx.fillStyle='white'; ctx.fillText('Collect',410,90);
+// Game canvas
+const c=document.getElementById("game"),ctx=c.getContext("2d");
+let W=window.innerWidth,H=window.innerHeight;c.width=W;c.height=H;
+let keys={};
+window.addEventListener("keydown",e=>keys[e.key]=true);
+window.addEventListener("keyup",e=>keys[e.key]=false);
 
-  ctx.fillStyle='orange'; ctx.fillRect(400,120,100,40);
-  ctx.fillStyle='white'; ctx.fillText('Upgrade',410,150);
+// Player
+let player={x:100,y:H-50,w:30,h:50,vy:0,jumping:false,color:"blue"};
+
+// Platforms
+let platforms=[{x:0,y:H-20,w:W,h:20}];
+
+// Simple Obby generator
+for(let i=1;i<10;i++){platforms.push({x:i*100+50,y:H-20-50*i,w:80,h:20});}
+
+// Main loop
+function loop(){
+  ctx.clearRect(0,0,W,H);
+  // Player physics
+  player.vy+=0.5;player.y+=player.vy;
+  if(keys["ArrowLeft"])player.x-=5;
+  if(keys["ArrowRight"])player.x+=5;
+  // Collision
+  platforms.forEach(p=>{
+    ctx.fillStyle="black";
+    ctx.fillRect(p.x,p.y,p.w,p.h);
+    if(player.x< p.x+p.w && player.x+player.w>p.x && player.y< p.y+p.h && player.y+player.h>p.y && player.vy>=0){
+      player.y=p.y-player.h;
+      player.vy=0;
+      player.jumping=false;
+    }
+  });
+  if(keys[" "] && !player.jumping){player.vy=-10;player.jumping=true;}
+  // Draw player
+  ctx.fillStyle=player.color;ctx.fillRect(player.x,player.y,player.w,player.h);
+  requestAnimationFrame(loop);
 }
+loop();
 
-requestAnimationFrame(update);
-}
+// Show games
+function showObby(){addChat("Obby selected");}
+function showTycoon(){addChat("Tycoon selected");}
 
-// --- Tycoon Button Clicks ---
-canvas.addEventListener('click',function(e){
-if(gameMode==='tycoon'){
-  const x=e.offsetX, y=e.offsetY;
-  if(x>=400 && x<=500 && y>=60 && y<=100){tycoonData.money+=tycoonData.income;}
-  if(x>=400 && x<=500 && y>=120 && y<=160 && tycoonData.money>=tycoonData.upgradeCost){
-    tycoonData.money-=tycoonData.upgradeCost;
-    tycoonData.level+=1;
-    tycoonData.income+=1;
-    tycoonData.upgradeCost=Math.floor(tycoonData.upgradeCost*1.5);
-  }
+// Mobile detection & simple buttons
+if(/Mobi|Android/i.test(navigator.userAgent)){
+  addChat("Mobile mode detected");
+  // Add touch buttons
+  let left=document.createElement("button"),right=document.createElement("button"),jump=document.createElement("button");
+  left.textContent="◀";right.textContent="▶";jump.textContent="▲";
+  left.style.position=right.style.position=jump.style.position="absolute";
+  left.style.bottom=right.style.bottom=jump.style.bottom="50px";
+  left.style.left="10px";right.style.left="60px";jump.style.right="10px";
+  left.onclick=()=>player.x-=5;right.onclick=()=>player.x+=5;jump.onclick=()=>{if(!player.jumping){player.vy=-10;player.jumping=true;}};
+  document.body.appendChild(left);document.body.appendChild(right);document.body.appendChild(jump);
 }
-});
-update();
 </script>
-
 </body>
 </html>
