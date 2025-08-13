@@ -1,108 +1,96 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<title>EedesiaBlox</title>
+<meta charset="UTF-8">
+<title>Eedesiablox</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-body{margin:0;overflow:hidden;font-family:'Press Start 2P',monospace;background:linear-gradient(135deg,red,yellow,orange,green);color:white}
-canvas{display:block;background:#c0c0c0}
-button{padding:6px 12px;cursor:pointer;font-family:'Press Start 2P',monospace;font-size:12px;border:2px solid white;border-radius:4px;background:linear-gradient(#333,#111);color:white;box-shadow:2px 2px 0 #555,4px 4px 0 #777;transition:all 0.1s ease}
-button:hover{background:linear-gradient(#555,#222);transform:translate(-2px,-2px);box-shadow:4px 4px 0 #555,6px 6px 0 #777}
-button:active{transform:translate(0,0);box-shadow:1px 1px 0 #555,2px 2px 0 #777}
-.panel{position:absolute;background:rgba(0,0,0,0.6);border:2px solid white;border-radius:6px;padding:6px;box-shadow:4px 4px 0 #555;font-family:'Press Start 2P',monospace;transition:all 0.1s ease}
-.panel:hover{background:rgba(50,50,50,0.8);transform:translate(-2px,-2px);box-shadow:6px 6px 0 #555}
-.panel:active{transform:translate(0,0);box-shadow:2px 2px 0 #555}
-/* UI positions */
-#musicToggle{top:10px;left:10px}#hubBtn{top:60px;left:10px}#obbyBtn{top:100px;left:10px}#tycoonBtn{top:140px;left:10px}
-#jumpBtn{bottom:80px;left:50px}#leftBtn{bottom:20px;left:10px}#rightBtn{bottom:20px;left:100px}
-#chatBox{bottom:0;right:0;width:280px;height:180px;overflow-y:auto}#chatInput{bottom:0;right:0;width:220px}#chatSend{bottom:0;right:0;width:50px}
-#leaderboard{top:10px;right:10px;width:200px;height:150px}
+body{margin:0;font-family:'Press Start 2P',monospace;background:linear-gradient(45deg,red,green,yellow,orange);color:#fff;overflow:hidden;}
+#title{font-size:3em;text-align:center;margin:20px;text-shadow:2px2px#000;}
+.panel{display:none;position:absolute;top:80px;left:50%;transform:translateX(-50%);text-align:center;}
+button{margin:5px;padding:10px 20px;font-family:inherit;font-size:1em;background:#222;color:#fff;border:2px solid #fff;cursor:pointer;}
+#chat{position:fixed;bottom:0;left:0;width:100%;display:flex;background:#000a;}
+#messages{flex:1;overflow-y:auto;max-height:150px;padding:5px;}
+#input{width:200px;}
+canvas{background:#000;display:block;margin:0 auto;}
 </style>
 </head>
 <body>
-<canvas id="game"></canvas>
-<button id="musicToggle">Music On</button>
-<button id="hubBtn">Hub</button>
-<button id="obbyBtn">Obby</button>
-<button id="tycoonBtn">Tycoon</button>
-<button id="jumpBtn">Jump</button>
-<button id="leftBtn">Left</button>
-<button id="rightBtn">Right</button>
-<div id="chatBox" class="panel"></div>
-<input type="text" id="chatInput" class="panel" placeholder="Type..."/>
-<button id="chatSend" class="panel">Send</button>
-<div id="leaderboard" class="panel">Leaderboard:</div>
+<div id="title">Eedesiablox</div>
+
+<div id="login" class="panel">
+<h2>Login</h2>
+<input id="loginUser" placeholder="Username"><br>
+<input id="loginPass" type="password" placeholder="Password"><br>
+<button onclick="login()">Login</button>
+<button onclick="showSignup()">Sign Up</button>
+</div>
+
+<div id="signup" class="panel">
+<h2>Sign Up</h2>
+<input id="signUser" placeholder="Username"><br>
+<input id="signPass" type="password" placeholder="Password"><br>
+<button onclick="signup()">Create Account</button>
+<button onclick="showLogin()">Back to Login</button>
+</div>
+
+<div id="hub" class="panel">
+<button onclick="showGame('obby')">Obby</button>
+<button onclick="showGame('tycoon')">Tycoon</button>
+<button onclick="toggleMusic()">Toggle Music</button>
+</div>
+
+<div id="obby" class="panel">
+<canvas id="obbyCanvas" width="800" height="400"></canvas><br>
+<button onclick="backToHub()">Back to Hub</button>
+</div>
+
+<div id="tycoon" class="panel">
+<h3>Money: <span id="money">0</span></h3>
+<button onclick="earnMoney(1)">Click to earn</button><br>
+<button onclick="backToHub()">Back to Hub</button>
+</div>
+
+<div id="chat">
+<div id="messages"></div>
+<input id="input" placeholder="Message">
+<button onclick="sendMessage()">Send</button>
+</div>
+
+<audio id="music" src="winds_of_fjords.mp3" loop></audio>
+<script src="/socket.io/socket.io.js"></script>
 <script>
-const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
-canvas.width=window.innerWidth;canvas.height=window.innerHeight;
-// Music
-let music=new Audio('winds_of_fjords.mp3');music.loop=true;music.play();
-let musicPlaying=true;
-document.getElementById('musicToggle').onclick=()=>{musicPlaying=!musicPlaying;musicPlaying?music.play():music.pause();};
-// Mode
-let mode='hub';
-document.getElementById('hubBtn').onclick=()=>{mode='hub';};
-document.getElementById('obbyBtn').onclick=()=>{mode='obby';};
-document.getElementById('tycoonBtn').onclick=()=>{mode='tycoon';};
-// Player & physics
-let gravity=0.7,jumpPower=-12;
-let player={x:50,y:200,vx:0,vy:0,w:30,h:50,onGround:false};
-let obstacles=[{x:200,y:400,w:100,h:20},{x:400,y:300,w:100,h:20}];
-let money=0;
-let tycoonBoxes=[{x:300,y:300,w:50,h:50,owned:false,level:0}];
-// Controls
-let keys={};
-document.getElementById('jumpBtn').onclick=()=>{if(player.onGround)player.vy=jumpPower;}
-document.getElementById('leftBtn').onclick=()=>{player.vx=-5;}
-document.getElementById('rightBtn').onclick=()=>{player.vx=5;}
-window.addEventListener('keydown',e=>keys[e.key]=true);
-window.addEventListener('keyup',e=>keys[e.key]=false);
-// Chat
-const chatBox=document.getElementById('chatBox');
-const chatInput=document.getElementById('chatInput');
-document.getElementById('chatSend').onclick=sendMessage;
-chatInput.addEventListener('keydown',e=>{if(e.key==='Enter')sendMessage();});
-function sendMessage(){const msg=chatInput.value.trim();if(msg==='')return;chatBox.innerHTML+='<div>You: '+msg+'</div>';chatBox.scrollTop=chatBox.scrollHeight;chatInput.value='';}
-// Leaderboard
-const leaderboard=document.getElementById('leaderboard');
-function updateLeaderboard(){leaderboard.innerHTML='Leaderboard:<br>';leaderboard.innerHTML+='Player: '+Math.floor(money)+'$<br>';}
-// Update function
-function update(){
-  if(mode==='obby'){
-    if(keys['ArrowLeft'])player.vx=-5;else if(keys['ArrowRight'])player.vx=5;else player.vx=0;
-    if(keys['ArrowUp']&&player.onGround)player.vy=jumpPower;
-    player.vy+=gravity;player.x+=player.vx;player.y+=player.vy;player.onGround=false;
-    obstacles.forEach(o=>{
-      if(player.x<o.x+o.w&&player.x+player.w>o.x&&player.y<o.y+o.h&&player.y+player.h>o.y){
-        player.y=o.y-player.h;player.vy=0;player.onGround=true;
-      }
-    });
-  }else if(mode==='tycoon'){
-    money+=0.1;
-    canvas.onclick=e=>{
-      const rect=canvas.getBoundingClientRect();
-      const mx=e.clientX-rect.left,my=e.clientY-rect.top;
-      tycoonBoxes.forEach(b=>{
-        if(mx>b.x&&mx<b.x+b.w&&my>b.y&&my<b.y+b.h){
-          if(!b.owned&&money>=50){b.owned=true;b.level=1;money-=50;}
-          else if(b.owned&&money>=100){b.level++;money-=100;}
-        }
-      });
-    };
-  }
-  updateLeaderboard();
-}
-// Draw function
-function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  if(mode==='hub'){ctx.fillStyle='black';ctx.font='50px Press Start 2P';ctx.fillText('Welcome to EedesiaBlox Hub',50,100);}
-  else if(mode==='obby'){ctx.fillStyle='brown';obstacles.forEach(o=>ctx.fillRect(o.x,o.y,o.w,o.h));ctx.fillStyle='blue';ctx.fillRect(player.x,player.y,player.w,player.h);}
-  else if(mode==='tycoon'){ctx.fillStyle='green';ctx.font='40px Press Start 2P';ctx.fillText('Money: '+Math.floor(money),50,100);tycoonBoxes.forEach(b=>{ctx.fillStyle=b.owned?'orange':'gray';ctx.fillRect(b.x,b.y,b.w,b.h);if(b.owned){ctx.fillStyle='white';ctx.fillText('Lvl '+b.level,b.x,b.y-5);}});}
-}
-// Game loop
-function loop(){update();draw();requestAnimationFrame(loop);}
-loop();
-</script>
-</body>
-</html>
+let currentUser=null; let money=0; const socket=io();
+function showLogin(){document.getElementById('login').style.display='block'; document.getElementById('signup').style.display='none'; document.getElementById('hub').style.display='none';}
+function showSignup(){document.getElementById('signup').style.display='block'; document.getElementById('login').style.display='none';}
+function showHub(){document.getElementById('hub').style.display='block'; document.getElementById('login').style.display='none'; document.getElementById('signup').style.display='none'; document.getElementById('obby').style.display='none'; document.getElementById('tycoon').style.display='none';}
+function showGame(game){document.getElementById(game).style.display='block'; document.getElementById('hub').style.display='none'; if(game==='obby'){startObby();}}
+function login(){const u=document.getElementById('loginUser').value; const p=document.getElementById('loginPass').value;
+fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
+.then(r=>r.json()).then(d=>{currentUser=u; money=d.money; document.getElementById('money').innerText=money; showHub(); socket.emit('join',{username:currentUser,x:50,y:350});}).catch(()=>alert('Login failed'))}
+function signup(){const u=document.getElementById('signUser').value; const p=document.getElementById('signPass').value;
+fetch('/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
+.then(r=>{if(r.ok){alert('Account created'); showLogin();}else alert('Username taken')});}
+function toggleMusic(){let m=document.getElementById('music'); m.paused?m.play():m.pause();}
+function earnMoney(n){money+=n; document.getElementById('money').innerText=money;}
+function backToHub(){showHub();}
+function sendMessage(){let msg=document.getElementById('input').value; if(msg){socket.emit('chat',{user:currentUser,text:msg}); document.getElementById('input').value='';}}
+socket.on('chat',msgs=>{msgs.forEach(m=>{let d=document.createElement('div'); d.innerText=m.user+': '+m.text; document.getElementById('messages').appendChild(d);}); document.getElementById('messages').scrollTop=document.getElementById('messages').scrollHeight;});
+let otherPlayers={};
+socket.on('players',data=>{otherPlayers=data;});
+
+// Obby platformer
+function startObby(){
+const c=document.getElementById('obbyCanvas'); const ctx=c.getContext('2d');
+let player={x:50,y:350,w:20,h:40,vy:0};
+const keys={}; const gravity=0.8;
+const platforms=[{x:0,y:390,w:800,h:10},{x:150,y:300,w:100,h:10},{x:300,y:250,w:100,h:10},{x:450,y:200,w:100,h:10}];
+document.addEventListener('keydown',e=>keys[e.key]=true);
+document.addEventListener('keyup',e=>keys[e.key]=false);
+function loop(){
+ctx.clearRect(0,0,c.width,c.height);
+if(keys['ArrowLeft'])player.x-=4;
+if(keys['ArrowRight'])player.x+=4;
+if(keys['ArrowUp']&&player.vy===0)player.vy=-12;
+player.vy+=gravity; player.y+=player.vy;
+// collision
+platforms.forEach(p=>{if(player.x+player.w>p.x&&player.x<p.x+p.w&&player.y+player.h>p.y&&player.y+player.h<p.y+p.h){player.y=p.y-player.h; player.vy=0;} ctx.fillStyle='white'; ctx.fillRect(p.x,p.y,p.w,p.h);
