@@ -2,169 +2,62 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Eedesiablox</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-body {
-  margin:0;
-  font-family:'Press Start 2P',monospace;
-  background: linear-gradient(45deg, red, orange, yellow, green);
-  color:white;
-  overflow:hidden;
-}
-#title {
-  font-size:3em;
-  text-align:center;
-  margin:20px;
-  text-shadow:2px2px #000;
-}
-.panel {
-  display:none;
-  position:absolute;
-  top:100px;
-  left:50%;
-  transform:translateX(-50%);
-  text-align:center;
-}
-button {
-  margin:5px;
-  padding:10px 20px;
-  font-family:inherit;
-  font-size:1em;
-  background:#222;
-  color:#fff;
-  border:2px solid #fff;
-  cursor:pointer;
-}
-#chat {
-  position:fixed;
-  bottom:0;
-  left:0;
-  width:100%;
-  display:flex;
-  background:#000a;
-}
-#messages {
-  flex:1;
-  overflow-y:auto;
-  max-height:150px;
-  padding:5px;
-}
-#input {
-  width:200px;
-}
-canvas {
-  background:#000;
-  display:block;
-  margin:0 auto;
-  border:2px solid #fff;
-}
+  /* Gradient background */
+  body {
+    margin:0; padding:0;
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(45deg, red, orange, yellow, green);
+    overflow:hidden;
+    color:white;
+  }
+  #ui {
+    position:absolute; top:10px; left:10px;
+    display:flex; flex-direction:column; gap:10px;
+    z-index:100;
+  }
+  button {
+    font-size:18px; padding:10px;
+    background:rgba(0,0,0,0.5); border:none;
+    color:white; cursor:pointer;
+  }
+  #chat { position:absolute; bottom:10px; left:10px; width:200px; max-height:150px; overflow-y:auto; background:rgba(0,0,0,0.5); padding:5px; font-size:14px;}
+  #messages {max-height:120px; overflow-y:auto;}
+  #input {width:100%;}
+  canvas {background:black; display:block; margin:0 auto;}
 </style>
 </head>
 <body>
 
-<div id="title">Eedesiablox</div>
-
-<!-- Login Panel -->
-<div id="login" class="panel">
-<h2>Login</h2>
-<input id="loginUser" placeholder="Username"><br>
-<input id="loginPass" type="password" placeholder="Password"><br>
-<button onclick="login()">Login</button>
-<button onclick="showSignup()">Sign Up</button>
+<div id="ui">
+  <div id="login">
+    <input id="username" placeholder="Username">
+    <input id="password" type="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+    <button onclick="signup()">Sign Up</button>
+  </div>
+  <div id="menu" style="display:none;">
+    <button onclick="startGame('obby')">Obby</button>
+    <button onclick="startGame('tycoon')">Tycoon</button>
+    <button onclick="toggleMusic()">Music On/Off</button>
+  </div>
 </div>
 
-<!-- Sign-up Panel -->
-<div id="signup" class="panel">
-<h2>Sign Up</h2>
-<input id="signUser" placeholder="Username"><br>
-<input id="signPass" type="password" placeholder="Password"><br>
-<button onclick="signup()">Create Account</button>
-<button onclick="showLogin()">Back to Login</button>
-</div>
-
-<!-- Hub -->
-<div id="hub" class="panel">
-<button onclick="showGame('obby')">Obby</button>
-<button onclick="showGame('tycoon')">Tycoon</button>
-<button onclick="toggleMusic()">Toggle Music</button>
-</div>
-
-<!-- Obby Game -->
-<div id="obby" class="panel">
-<canvas id="obbyCanvas" width="800" height="400"></canvas><br>
-<button onclick="backToHub()">Back to Hub</button>
-</div>
-
-<!-- Tycoon -->
-<div id="tycoon" class="panel">
-<h3>Money: <span id="money">0</span></h3>
-<button onclick="earnMoney(1)">Click to earn</button><br>
-<button onclick="backToHub()">Back to Hub</button>
-</div>
-
-<!-- Chat -->
 <div id="chat">
-<div id="messages"></div>
-<input id="input" placeholder="Message">
-<button onclick="sendMessage()">Send</button>
+  <div id="messages"></div>
+  <input id="input" placeholder="Say something..." onkeydown="if(event.key==='Enter'){sendMessage()}">
 </div>
 
-<audio id="music" src="winds_of_fjords.mp3" loop></audio>
+<audio id="music" src="winds-of-fjords.mp3" loop></audio>
+<canvas id="game" width="800" height="500"></canvas>
 
 <script>
-let currentUser=null; 
-let money=0;
+// --- Mobile detection ---
+const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+if(isMobile){ alert("Mobile controls enabled"); }
 
-function showLogin(){document.getElementById('login').style.display='block';document.getElementById('signup').style.display='none';document.getElementById('hub').style.display='none';}
-function showSignup(){document.getElementById('signup').style.display='block';document.getElementById('login').style.display='none';}
-function showHub(){document.getElementById('hub').style.display='block';document.getElementById('login').style.display='none';document.getElementById('signup').style.display='none';document.getElementById('obby').style.display='none';document.getElementById('tycoon').style.display='none';}
-function showGame(game){document.getElementById(game).style.display='block';document.getElementById('hub').style.display='none';if(game==='obby'){startObby();}}
-
-function login(){
-  currentUser=document.getElementById('loginUser').value;
-  money=0; // placeholder for demo
-  showHub();
-}
-function signup(){alert('Account created'); showLogin();}
-function toggleMusic(){let m=document.getElementById('music'); m.paused?m.play():m.pause();}
-function earnMoney(n){money+=n;document.getElementById('money').innerText=money;}
-function backToHub(){showHub();}
-function sendMessage(){let msg=document.getElementById('input').value;if(msg){let d=document.createElement('div');d.innerText=currentUser+': '+msg;document.getElementById('messages').appendChild(d);document.getElementById('input').value='';document.getElementById('messages').scrollTop=document.getElementById('messages').scrollHeight;}}
-
-// Obby Game
-function startObby(){
-const c=document.getElementById('obbyCanvas');
-const ctx=c.getContext('2d');
-let player={x:50,y:350,w:20,h:40,vy:0};
-const keys={};
-const gravity=0.8;
-const platforms=[{x:0,y:390,w:800,h:10},{x:150,y:300,w:100,h:10},{x:300,y:250,w:100,h:10},{x:450,y:200,w:100,h:10}];
-document.addEventListener('keydown',e=>keys[e.key]=true);
-document.addEventListener('keyup',e=>keys[e.key]=false);
-function loop(){
-  ctx.clearRect(0,0,c.width,c.height);
-  if(keys['ArrowLeft'])player.x-=4;
-  if(keys['ArrowRight'])player.x+=4;
-  if(keys['ArrowUp']&&player.vy===0)player.vy=-12;
-  player.vy+=gravity; player.y+=player.vy;
-  platforms.forEach(p=>{
-    if(player.x+player.w>p.x && player.x<p.x+p.w && player.y+player.h>p.y && player.y+player.h<p.y+p.h){
-      player.y=p.y-player.h;
-      player.vy=0;
-    }
-    ctx.fillStyle='white';
-    ctx.fillRect(p.x,p.y,p.w,p.h);
-  });
-  ctx.fillStyle='red';
-  ctx.fillRect(player.x,player.y,player.w,player.h);
-  requestAnimationFrame(loop);
-}
-loop();
-}
-
-// Start login panel
-showLogin();
-</script>
-</body>
-</html>
+// --- Music toggle ---
+const music = document.getElementById('music');
+function toggle
